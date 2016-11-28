@@ -95,17 +95,20 @@ function Water::AreShipsAllowed() {
 }
 
 function Water::GetBestShipModelForCargo(cargo) {
-    local engine_list = AIEngineList(AIVehicle.VT_WATER);
-    engine_list.Valuate(AIEngine.GetCargoType);
-    engine_list.KeepValue(cargo);    
-    if(engine_list.IsEmpty()) {
-        engine_list = AIEngineList(AIVehicle.VT_WATER);
-        engine_list.Valuate(AIEngine.CanRefitCargo, cargo);
-        engine_list.KeepValue(1);
-    }
-    engine_list.Valuate(ShipModelRating);
-    engine_list.Sort(AIList.SORT_BY_VALUE, AIList.SORT_DESCENDING);
-    return engine_list.IsEmpty() ? -1 : engine_list.Begin();
+    /* Spefic for this cargo. */
+    local cargo_specific = AIEngineList(AIVehicle.VT_WATER);
+    cargo_specific.Valuate(AIEngine.GetCargoType);
+    cargo_specific.KeepValue(cargo);
+    
+    /* Refittable to this cargo. */
+    local refittable = AIEngineList(AIVehicle.VT_WATER);
+    refittable.Valuate(AIEngine.CanRefitCargo, cargo);
+    refittable.KeepValue(1);
+    
+    cargo_specific.AddList(refittable);
+    cargo_specific.Valuate(ShipModelRating);
+    cargo_specific.Sort(AIList.SORT_BY_VALUE, AIList.SORT_DESCENDING);
+    return cargo_specific.IsEmpty() ? -1 : cargo_specific.Begin();
 }
 
 function Water::BuildShip(depot, cargo) {

@@ -58,7 +58,7 @@ function ShipAI::Start() {
         if(upgraded > 0) AILog.Info("Ships sent for upgrading: " + upgraded);
         if(statues_founded > 1) AILog.Info("Statues founded: " + statues_founded);
         
-        terra.BuildCanals();
+        //terra.BuildCanals();
         
         AICompany.SetLoanAmount(0);        
         this.Sleep(50);
