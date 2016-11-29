@@ -1,5 +1,10 @@
+require("vehicle_model.nut");
+require("utils.nut");
+
 /* Water utils. */
 class Water {
+    /* Max connection length. */
+    max_path_len = 450;
     /* Max dock distance from the city center. */
     max_dock_distance = 20;
     /* Minimal money left after buying something. */
@@ -69,9 +74,6 @@ function GetCoastTileNearestIndustry(industry, is_producer) {
 function IndustryCanHaveDock(industry, is_producer) {
     return AIIndustry.HasDock(industry) || !GetCoastTilesNearIndustry(industry, is_producer).IsEmpty();
 }
-function ShipModelRating(model) { /* For finding the best vehicle model. */
-    return AIEngine.GetCapacity(model) * AIEngine.GetMaxSpeed(model);
-}
 
 /* Checks if building ships is possible. */
 function Water::AreShipsAllowed() {
@@ -94,25 +96,8 @@ function Water::AreShipsAllowed() {
     return true;
 }
 
-function Water::GetBestShipModelForCargo(cargo) {
-    /* Spefic for this cargo. */
-    local cargo_specific = AIEngineList(AIVehicle.VT_WATER);
-    cargo_specific.Valuate(AIEngine.GetCargoType);
-    cargo_specific.KeepValue(cargo);
-    
-    /* Refittable to this cargo. */
-    local refittable = AIEngineList(AIVehicle.VT_WATER);
-    refittable.Valuate(AIEngine.CanRefitCargo, cargo);
-    refittable.KeepValue(1);
-    
-    cargo_specific.AddList(refittable);
-    cargo_specific.Valuate(ShipModelRating);
-    cargo_specific.Sort(AIList.SORT_BY_VALUE, AIList.SORT_DESCENDING);
-    return cargo_specific.IsEmpty() ? -1 : cargo_specific.Begin();
-}
-
-function Water::BuildShip(depot, cargo) {
-    local engine = GetBestShipModelForCargo(cargo);
+function Water::BuildShip(depot, cargo, round_trip_distance, monthly_production) {
+    local engine = GetBestVehicleModelForCargo(AIVehicle.VT_WATER, cargo, round_trip_distance, monthly_production);
     if(!AIEngine.IsValidEngine(engine))
         return -1;
         
@@ -258,9 +243,8 @@ function Water::BuildWaterDepot(dock, max_distance) {
     return -1;
 }
 
-function Water::BuildAndStartShip(dock1, dock2, cargo, path, full_load) {
-    local engine = GetBestShipModelForCargo(cargo);
-    if(engine == -1)
+function Water::BuildAndStartShip(dock1, dock2, cargo, path, full_load, monthly_production) {
+    if(!VehicleModelForCargoExists(AIVehicle.VT_WATER, cargo))
         return false;
     
     /* Find or build the water depot. Don't go too far to avoid finding depot from other lake/sea. */
@@ -273,7 +257,8 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, path, full_load) {
         }
     }
     
-    local vehicle = BuildShip(depot, cargo);
+    local distance = path.len();
+    local vehicle = BuildShip(depot, cargo, distance * 2, monthly_production);
     if(vehicle == -1) {
         AILog.Error("Failed to build the ship: " + AIError.GetLastErrorString());
         return false;
@@ -281,11 +266,19 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, path, full_load) {
     
     /* Build buoys every n tiles. */
     local buoys = [];
-    for(local i = this.buoy_distance; i<path.len()-this.buoy_distance/2; i += this.buoy_distance)
+    for(local i = this.buoy_distance; i<distance-this.buoy_distance/2; i += this.buoy_distance)
         buoys.push(GetBuoy(path[i]));
     
     /* Schedule path. */
     local load_order = full_load ? AIOrder.OF_FULL_LOAD : AIOrder.OF_NONE;
+    //if(full_load) {
+        //local expected_cargo = (monthly_production * (distance * 2)) / 30.0;
+        //AILog.Info("Expected cargo: " + expected_cargo);
+        /* We don't do the full load if the capacity of the vehicle is too big. */
+        //if(AIVehicle.GetCapacity(vehicle, cargo) < 2 * expected_cargo)
+            //load_order = AIOrder.OF_FULL_LOAD;
+    //}
+    
     if(!AIOrder.AppendOrder(vehicle, dock1, load_order)) {
         AILog.Error("Failed to schedule the ship: " + AIError.GetLastErrorString());
         AIVehicle.SellVehicle(vehicle);

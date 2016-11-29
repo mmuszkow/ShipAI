@@ -5,9 +5,6 @@ require("terraforming.nut");
 require("utils.nut");
 
 class ShipAI extends AIController {
-    /* Water construction utils. */
-    _water = Water();
-    
     constructor() {}
 }
 
@@ -23,11 +20,11 @@ function ShipAI::Start() {
     local terra = Terraforming();
     
     /* Check if we have anything to do, if not repay the loan and wait. */
-    if(!this._water.AreShipsAllowed()) {
+    if(!freight.AreShipsAllowed()) {
         AILog.Warning("Not possible to build ships - falling asleep");
         AICompany.SetLoanAmount(0);
     }
-    while(!this._water.AreShipsAllowed()) { this.Sleep(1000); }
+    while(!freight.AreShipsAllowed()) { this.Sleep(1000); }
     
     local loan_limit = AICompany.GetMaxLoanAmount();
     AICompany.SetLoanAmount(loan_limit);
@@ -44,7 +41,7 @@ function ShipAI::Start() {
 
         local upgraded = 0;
         for(local cargo = cargos.Begin(); cargos.HasNext(); cargo = cargos.Next())
-            upgraded += maintenance.UpgradeModel(AIVehicle.VT_WATER, this._water.GetBestShipModelForCargo(cargo), cargo);
+            upgraded += maintenance.UpgradeModel(AIVehicle.VT_WATER, cargo);
         
         /* Build statues when nothing better to do, they increase the stations rating. */
         local statues_founded = 0;

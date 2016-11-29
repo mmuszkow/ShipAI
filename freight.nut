@@ -4,18 +4,12 @@ require("water.nut");
 require("pathfinder/line.nut");
 require("pathfinder/coast.nut");
 
-class FreightShip {
+class FreightShip extends Water {
     /* Max Manhattan distance between 2 industries to open a new connection. */
     max_distance = 300;
-    /* Max connection length. */
-    max_path_len = 450;
     /* Less this percent of the cargo transported to open a new route. */
     percent_to_open_new_route = 61;
-    /* New route is build if waiting cargo > this value * capacity of current best vehicle. */
-    waiting_mul = 1.25;
     
-    /* Water construction utils. */
-    _water = Water();
     /* Pathfinders. */
     _line_pathfinder = StraightLinePathfinder();
     _coast_pathfinder = CoastPathfinder();
@@ -25,7 +19,7 @@ class FreightShip {
 
 function FreightShip::BuildTownFreightRoutes() {
     local ships_built = 0;
-    if(!this._water.AreShipsAllowed())
+    if(!AreShipsAllowed())
         return ships_built;
     
     local cargos = AICargoList();
@@ -36,17 +30,15 @@ function FreightShip::BuildTownFreightRoutes() {
     
     for(local cargo = cargos.Begin(); cargos.HasNext(); cargo = cargos.Next()) {
         
-        /* Check if we can transport this cargo and set the min cargo waiting limit. */
-        local best_engine = this._water.GetBestShipModelForCargo(cargo);
-        if(best_engine == -1)
+        /* Check if we can transport this cargo. */
+        if(!VehicleModelForCargoExists(AIVehicle.VT_WATER, cargo))
             continue;
-        local min_cargo = this.waiting_mul * AIEngine.GetCapacity(best_engine);
         
         local producers = AIIndustryList_CargoProducing(cargo);
         producers.Valuate(AIIndustry.GetLastMonthProduction, cargo);
         producers.KeepAboveValue(0); /* production more than 0. */
         producers.Valuate(AIIndustry.GetLastMonthTransportedPercentage, cargo);
-        producers.KeepBelowValue(this.percent_to_open_new_route); /* Less than 40% of cargo transported. */
+        producers.KeepBelowValue(this.percent_to_open_new_route); /* Less than 60% of cargo transported. */
         producers.Valuate(IndustryCanHaveDock, true);
         producers.RemoveValue(0);
    
@@ -55,15 +47,7 @@ function FreightShip::BuildTownFreightRoutes() {
             /* Industry may cease to exist. */
             if(!AIIndustry.IsValidIndustry(producer))
                 continue;
-            
-            local dock1 = this._water.FindDockNearIndustry(producer, true);
-            /* If the dock is already there, don't create new ship if there is not much cargo waiting. */
-            if(dock1 != -1) {
-                local station_id = AIStation.GetStationID(dock1);
-                if(AIStation.HasCargoRating(station_id, cargo) && AIStation.GetCargoWaiting(station_id, cargo) < min_cargo)
-                    continue;
-            }
-            
+                        
             /* Get acceptors. */
             local acceptors = AITownList();
             acceptors.Valuate(AITown.GetDistanceManhattanToTile, AIIndustry.GetLocation(producer));
@@ -71,7 +55,7 @@ function FreightShip::BuildTownFreightRoutes() {
             acceptors.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
             
             /* For path finding. */
-            local dock1 = this._water.FindDockNearIndustry(producer, true);
+            local dock1 = FindDockNearIndustry(producer, true);
             local coast1 = dock1;
             if(coast1 == -1)
                 coast1 = GetCoastTileNearestIndustry(producer, true);
@@ -80,12 +64,14 @@ function FreightShip::BuildTownFreightRoutes() {
                 continue;
             }
             
+            local monthly_production = AIIndustry.GetLastMonthProduction(producer, cargo);
+            
             for(local acceptor = acceptors.Begin(); acceptors.HasNext(); acceptor = acceptors.Next()) {
-                local dock2 = this._water.FindDockNearTown(acceptor, cargo);
+                local dock2 = FindDockNearTown(acceptor, cargo);
                 
                 /* If there is already a vehicle servicing this route, clone it, it's much faster. */
                 if(dock1 != -1 && dock2 != -1) {
-                    local clone_res = this._water.CloneShip(dock1, dock2, cargo);
+                    local clone_res = CloneShip(dock1, dock2, cargo);
                     if(clone_res == 2) {
                         AILog.Info("Adding next " + AICargo.GetCargoLabel(cargo) + " route between " 
                                 + AIStation.GetName(AIStation.GetStationID(dock1)) + " and " 
@@ -94,7 +80,7 @@ function FreightShip::BuildTownFreightRoutes() {
                         break;
                     } else if(clone_res == 1) {
                         /* Error. */
-                        if(!this._water.AreShipsAllowed())
+                        if(!AreShipsAllowed())
                             return ships_built;
                         break;
                     }
@@ -102,7 +88,7 @@ function FreightShip::BuildTownFreightRoutes() {
                 
                 local coast2 = dock2;
                 if(coast2 == -1)
-                    coast2 = GetCoastTileNearestTown(acceptor, this._water.max_dock_distance, cargo);
+                    coast2 = GetCoastTileNearestTown(acceptor, this.max_dock_distance, cargo);
                 if(coast2 == -1)
                     continue;
                 
@@ -117,26 +103,26 @@ function FreightShip::BuildTownFreightRoutes() {
                 
                 /* Find/build docks. */
                 if(dock1 == -1)
-                    dock1 = this._water.BuildDockNearIndustry(producer, true);
+                    dock1 = BuildDockNearIndustry(producer, true);
                 if(dock1 == -1) {
                     AILog.Error("Failed to build the dock: " + AIError.GetLastErrorString());
                     break;
                 }
                 if(dock2 == -1)
-                    dock2 = this._water.BuildDockInTown(acceptor, cargo);
+                    dock2 = BuildDockInTown(acceptor, cargo);
                 if(dock2 == -1) {
                     AILog.Error("Failed to build the dock: " + AIError.GetLastErrorString());
                     break;
                 }
                 
                 /* Build vehicle. */
-                if(this._water.BuildAndStartShip(dock1, dock2, cargo, path, true)) {
-                    AILog.Info("Building " + AICargo.GetCargoLabel(cargo) + " route between " 
-                                + AIStation.GetName(AIStation.GetStationID(dock1)) + " and " 
+                if(BuildAndStartShip(dock1, dock2, cargo, path, true, monthly_production)) {
+                    AILog.Info("Building " + AICargo.GetCargoLabel(cargo) + " route between "
+                                + AIStation.GetName(AIStation.GetStationID(dock1)) + " and "
                                 + AIStation.GetName(AIStation.GetStationID(dock2)));
                     ships_built++;
                     break;
-                } else if(!this._water.AreShipsAllowed())
+                } else if(!AreShipsAllowed())
                     return ships_built;                
             }
         }
@@ -147,7 +133,7 @@ function FreightShip::BuildTownFreightRoutes() {
 
 function FreightShip::BuildIndustryFreightRoutes() {
     local ships_built = 0;
-    if(!this._water.AreShipsAllowed())
+    if(!AreShipsAllowed())
         return ships_built;
     
     local cargos = AICargoList();
@@ -158,18 +144,16 @@ function FreightShip::BuildIndustryFreightRoutes() {
     
     for(local cargo = cargos.Begin(); cargos.HasNext(); cargo = cargos.Next()) {
         
-        /* Check if we can transport this cargo and set the min cargo waiting limit. */
-        local best_engine = this._water.GetBestShipModelForCargo(cargo);
-        if(best_engine == -1)
+        /* Check if we can transport this cargo. */
+        if(!VehicleModelForCargoExists(AIVehicle.VT_WATER, cargo))
             continue;
-        local min_cargo = floor(this.waiting_mul * AIEngine.GetCapacity(best_engine));
         
         /* Get producers. */
         local producers = AIIndustryList_CargoProducing(cargo);
         producers.Valuate(AIIndustry.GetLastMonthProduction, cargo);
         producers.KeepAboveValue(0); /* production more than 0. */
         producers.Valuate(AIIndustry.GetLastMonthTransportedPercentage, cargo);
-        producers.KeepBelowValue(this.percent_to_open_new_route); /* Less than 40% of cargo transported. */
+        producers.KeepBelowValue(this.percent_to_open_new_route); /* Less than 60% of cargo transported. */
         producers.Valuate(IndustryCanHaveDock, true);
         producers.RemoveValue(0);
         
@@ -184,14 +168,16 @@ function FreightShip::BuildIndustryFreightRoutes() {
             if(!AIIndustry.IsValidIndustry(producer))
                 continue;
 
-            local dock1 = this._water.FindDockNearIndustry(producer, true);
-            /* If the dock is already there, don't create new ship if there is not much cargo waiting. */
-            if(dock1 != -1) {
+            local dock1 = FindDockNearIndustry(producer, true);
+            
+            /* Skip those serviced and with less than 100 units of cargo waiting. */
+            if(dock1 != 1) {
                 local station_id = AIStation.GetStationID(dock1);
-                if(AIStation.HasCargoRating(station_id, cargo) && AIStation.GetCargoWaiting(station_id, cargo) < min_cargo)
+                if(    AIStation.HasCargoRating(station_id, cargo)
+                    && AIStation.GetCargoWaiting(station_id, cargo) < 100)
                     continue;
             }
-        
+            
             local coast1 = dock1;
             
             /* In case of an industry with a dock on water (offshore only?), we cannot use standard pathfinding algorithms. */
@@ -225,6 +211,8 @@ function FreightShip::BuildIndustryFreightRoutes() {
             close_acceptors.KeepBelowValue(this.max_distance);
             close_acceptors.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
             
+            local monthly_production = AIIndustry.GetLastMonthProduction(producer, cargo);
+            
             for(local acceptor = close_acceptors.Begin(); close_acceptors.HasNext(); acceptor = close_acceptors.Next()) {
                 
                 /* Industries may get closed. */
@@ -235,11 +223,11 @@ function FreightShip::BuildIndustryFreightRoutes() {
                 if(acceptor == producer)
                     continue;
                 
-                local dock2 = this._water.FindDockNearIndustry(acceptor, false);
+                local dock2 = FindDockNearIndustry(acceptor, false);
                 
                 /* If there is already a vehicle servicing this route, clone it, it's much faster. */
                 if(dock1 != -1 && dock2 != -1) {
-                    local clone_res = this._water.CloneShip(dock1, dock2, cargo);
+                    local clone_res = CloneShip(dock1, dock2, cargo);
                     if(clone_res == 2) {
                         AILog.Info("Adding next " + AICargo.GetCargoLabel(cargo) + " route between " 
                                 + AIStation.GetName(AIStation.GetStationID(dock1)) + " and " 
@@ -248,7 +236,7 @@ function FreightShip::BuildIndustryFreightRoutes() {
                         break;
                     } else if(clone_res == 1) {
                         /* Error. */
-                        if(!this._water.AreShipsAllowed())
+                        if(!AreShipsAllowed())
                             return ships_built;
                         break;
                     }
@@ -290,26 +278,26 @@ function FreightShip::BuildIndustryFreightRoutes() {
                 
                 /* Find/build docks. */
                 if(dock1 == -1)
-                    dock1 = this._water.BuildDockNearIndustry(producer, true);
+                    dock1 = BuildDockNearIndustry(producer, true);
                 if(dock1 == -1) {
                     AILog.Error("Failed to build the dock: " + AIError.GetLastErrorString());
                     break;
                 }
                 if(dock2 == -1)
-                    dock2 = this._water.BuildDockNearIndustry(acceptor, false);
+                    dock2 = BuildDockNearIndustry(acceptor, false);
                 if(dock2 == -1) {
                     AILog.Error("Failed to build the dock: " + AIError.GetLastErrorString());
                     break;
                 }
                 
                 /* Build vehicle. */
-                if(this._water.BuildAndStartShip(dock1, dock2, cargo, path, true)) {
+                if(BuildAndStartShip(dock1, dock2, cargo, path, true, monthly_production)) {
                     AILog.Info("Building " + AICargo.GetCargoLabel(cargo) + " route between " 
                                 + AIStation.GetName(AIStation.GetStationID(dock1)) + " and " 
                                 + AIStation.GetName(AIStation.GetStationID(dock2)));
                     ships_built++;
                     break;
-                } else if(!this._water.AreShipsAllowed())
+                } else if(!AreShipsAllowed())
                     return ships_built;
             }
         }
