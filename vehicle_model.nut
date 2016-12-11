@@ -9,13 +9,22 @@ function VehicleModelCanTransportCargo(model, cargo) {
 function VehicleModelHasProperCapacity(model, distance, monthly_production) {
     local daily_production = monthly_production / 30.4375;
     local travel_time_days = 27 * distance / AIEngine.GetMaxSpeed(model); // X km/h => X/27 tiles/day
+    /* This is a capacity for the main cargo, 
+       there is no nice way to determine the capacity for the specific cargo. 
+       https://www.tt-forums.net/viewtopic.php?t=61021
+     */
+    local capacity = AIEngine.GetCapacity(model);
     //AILog.Info("Production: " + (travel_time_days * daily_production) + " travel time: " + travel_time_days);
-    return AIEngine.GetCapacity(model) <= travel_time_days * daily_production;
+    return capacity <= 300 && capacity <= travel_time_days * daily_production;
 }
 
 /* For finding the best vehicle model. */
 function VehicleModelRating(model) {
-    return AIEngine.GetCapacity(model) * AIEngine.GetMaxSpeed(model);
+    /* This is a capacity for the main cargo, 
+       there is no nice way to determine the capacity for the specific cargo. 
+       https://www.tt-forums.net/viewtopic.php?t=61021
+     */
+    return (AIEngine.GetCapacity(model) * AIEngine.GetMaxSpeed(model) * AIEngine.GetReliability(model) / 100.0).tointeger()
 }
 
 function GetBestVehicleModelForCargo(vehicle_type, cargo, round_trip_distance, monthly_production) {

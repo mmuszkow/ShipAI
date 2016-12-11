@@ -51,7 +51,7 @@ function Ferry::BuildFerryRoutes() {
     local towns = AITownList();
     towns.Valuate(AITown.GetPopulation);
     towns.KeepAboveValue(this.min_population);
-    towns.Valuate(GetCoastTileNearestTown, this.max_dock_distance, this._passenger_cargo_id);
+    towns.Valuate(GetCoastTileNearestTown, this.max_city_dock_distance, this._passenger_cargo_id);
     towns.RemoveValue(-1);
     
     for(local town = towns.Begin(); towns.HasNext(); town = towns.Next()) {        
@@ -65,7 +65,7 @@ function Ferry::BuildFerryRoutes() {
         /* Find dock or potential place for dock. */
         local coast1 = dock1;
         if(coast1 == -1)
-            coast1 = GetCoastTileNearestTown(town, this.max_dock_distance, this._passenger_cargo_id);
+            coast1 = GetCoastTileNearestTown(town, this.max_city_dock_distance, this._passenger_cargo_id);
         
         /* Find a city suitable for connection closest to ours. */
         local towns2 = AIList();
@@ -102,7 +102,7 @@ function Ferry::BuildFerryRoutes() {
             /* Find dock or potential place for dock. */
             local coast2 = dock2;
             if(coast2 == -1)
-                coast2 = GetCoastTileNearestTown(town2, this.max_dock_distance, this._passenger_cargo_id);
+                coast2 = GetCoastTileNearestTown(town2, this.max_city_dock_distance, this._passenger_cargo_id);
             if(coast2 == -1)
                 continue;
             

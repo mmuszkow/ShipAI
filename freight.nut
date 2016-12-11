@@ -54,8 +54,16 @@ function FreightShip::BuildTownFreightRoutes() {
             acceptors.KeepBelowValue(this.max_distance);
             acceptors.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
             
-            /* For path finding. */
+            /* Skip those serviced and with less than 100 units of cargo waiting. */
             local dock1 = FindDockNearIndustry(producer, true);
+            if(dock1 != 1) {
+                local station_id = AIStation.GetStationID(dock1);
+                if(    AIStation.HasCargoRating(station_id, cargo)
+                    && AIStation.GetCargoWaiting(station_id, cargo) < 100)
+                    continue;
+            }
+            
+            /* For path finding. */
             local coast1 = dock1;
             if(coast1 == -1)
                 coast1 = GetCoastTileNearestIndustry(producer, true);
@@ -64,7 +72,10 @@ function FreightShip::BuildTownFreightRoutes() {
                 continue;
             }
             
+            /* Get monthly production to determine the potential ship size. */
             local monthly_production = AIIndustry.GetLastMonthProduction(producer, cargo);
+            if(monthly_production == 0)
+                continue;
             
             for(local acceptor = acceptors.Begin(); acceptors.HasNext(); acceptor = acceptors.Next()) {
                 local dock2 = FindDockNearTown(acceptor, cargo);
@@ -88,7 +99,7 @@ function FreightShip::BuildTownFreightRoutes() {
                 
                 local coast2 = dock2;
                 if(coast2 == -1)
-                    coast2 = GetCoastTileNearestTown(acceptor, this.max_dock_distance, cargo);
+                    coast2 = GetCoastTileNearestTown(acceptor, this.max_city_dock_distance, cargo);
                 if(coast2 == -1)
                     continue;
                 
@@ -211,7 +222,10 @@ function FreightShip::BuildIndustryFreightRoutes() {
             close_acceptors.KeepBelowValue(this.max_distance);
             close_acceptors.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
             
+            /* Get monthly production to determine the potential ship size. */
             local monthly_production = AIIndustry.GetLastMonthProduction(producer, cargo);
+            if(monthly_production == 0)
+                continue;
             
             for(local acceptor = close_acceptors.Begin(); close_acceptors.HasNext(); acceptor = close_acceptors.Next()) {
                 

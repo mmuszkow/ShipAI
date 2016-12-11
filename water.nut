@@ -6,7 +6,7 @@ class Water {
     /* Max connection length. */
     max_path_len = 450;
     /* Max dock distance from the city center. */
-    max_dock_distance = 20;
+    max_city_dock_distance = 20;
     /* Minimal money left after buying something. */
     min_balance = 20000;
     /* Path buoys distance. */
@@ -137,7 +137,7 @@ function Water::FindDockNearTown(town, cargo) {
 }
 
 function Water::BuildDockInTown(town, cargo) {
-    local coast = GetCoastTilesNearTown(town, this.max_dock_distance, cargo);
+    local coast = GetCoastTilesNearTown(town, this.max_city_dock_distance, cargo);
     local city = AITown.GetLocation(town);
     coast.Valuate(AIMap.DistanceManhattan, city);
     coast.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
@@ -271,13 +271,6 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, path, full_load, monthly_
     
     /* Schedule path. */
     local load_order = full_load ? AIOrder.OF_FULL_LOAD : AIOrder.OF_NONE;
-    //if(full_load) {
-        //local expected_cargo = (monthly_production * (distance * 2)) / 30.0;
-        //AILog.Info("Expected cargo: " + expected_cargo);
-        /* We don't do the full load if the capacity of the vehicle is too big. */
-        //if(AIVehicle.GetCapacity(vehicle, cargo) < 2 * expected_cargo)
-            //load_order = AIOrder.OF_FULL_LOAD;
-    //}
     
     if(!AIOrder.AppendOrder(vehicle, dock1, load_order)) {
         AILog.Error("Failed to schedule the ship: " + AIError.GetLastErrorString());
@@ -323,7 +316,7 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, path, full_load, monthly_
     return true;
 }
 
-/* 0 - no existing route, 1 - error, 2 - success */
+/* 0 - no existing route or vehicle obsolete, 1 - error, 2 - success */
 function Water::CloneShip(dock1, dock2, cargo) {    
     /* Check if these 2 docks are indeed served by an existing vehicle. */
     local dock1_vehs = AIVehicleList_Station(AIStation.GetStationID(dock1));
@@ -332,6 +325,20 @@ function Water::CloneShip(dock1, dock2, cargo) {
     local dock2_vehs = AIVehicleList_Station(AIStation.GetStationID(dock2));
     dock1_vehs.KeepList(dock2_vehs);
     if(dock1_vehs.IsEmpty())
+        return 0;
+    
+    /* Choose the best model. */
+    dock1_vehs.Valuate(VehicleModelRating);
+    dock1_vehs.Sort(AIList.SORT_BY_VALUE, AIList.SORT_DESCENDING);
+    local vehicle = dock1_vehs.Begin();
+    local engine = AIVehicle.GetEngineType(vehicle);
+    
+    /* Wait until we have the money. */
+    while(AIEngine.IsValidEngine(engine) && 
+         (AIEngine.GetPrice(engine) > AICompany.GetBankBalance(AICompany.COMPANY_SELF) - this.min_balance)) {}
+         
+    /* Check if the vehicle is still produced. */
+    if(!AIEngine.IsValidEngine(engine))
         return 0;
     
     /* Find the depot where we can clone the vehicle. */
@@ -344,13 +351,6 @@ function Water::CloneShip(dock1, dock2, cargo) {
         AILog.Error("Failed to build the water depot: " + AIError.GetLastErrorString());
         return 1;
     }
-    
-    local vehicle = dock1_vehs.Begin();
-    local engine = AIVehicle.GetEngineType(vehicle);
-    
-    /* Wait until we have the money. */
-    while(AIEngine.IsValidEngine(engine) && 
-         (AIEngine.GetPrice(engine) > AICompany.GetBankBalance(AICompany.COMPANY_SELF) - this.min_balance)) {}
     
     local cloned = AIVehicle.CloneVehicle(depot, vehicle, true);
     if(!AIVehicle.IsValidVehicle(cloned)) {

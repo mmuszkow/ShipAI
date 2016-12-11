@@ -86,7 +86,7 @@ function Maintenance::SellUnprofitable() {
     return sold;
 }
 
-/* Replaces with best model, if possible. */
+/* Replaces model with better model, if possible. */
 function Maintenance::UpgradeModel(vehicle_type, cargo) {
     local sent_to_upgrade = 0;
     
@@ -96,7 +96,7 @@ function Maintenance::UpgradeModel(vehicle_type, cargo) {
     possible.KeepValue(1);
     
     /* None to replace with. */
-    if(possible.Count() < 2)
+    if(possible.IsEmpty())
         return sent_to_upgrade;
     
     /* Find the vehicles to be upgraded. */
@@ -108,7 +108,6 @@ function Maintenance::UpgradeModel(vehicle_type, cargo) {
     local min_balance = AICompany.GetAutoRenewMoney(AICompany.COMPANY_SELF);
     local balance = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
     
-            
     for(local vehicle = vehicles.Begin(); vehicles.HasNext(); vehicle = vehicles.Next()) {
         local current_model = AIVehicle.GetEngineType(vehicle);
         local capacity = AIVehicle.GetCapacity(vehicle, cargo);
@@ -126,6 +125,7 @@ function Maintenance::UpgradeModel(vehicle_type, cargo) {
         better.Valuate(AIEngine.GetMaxSpeed);
         if(AIEngine.IsValidEngine(current_model))
             better.RemoveBelowValue(AIEngine.GetMaxSpeed(current_model));
+        better.Valuate(VehicleModelRating);
         better.Sort(AIList.SORT_BY_VALUE, AIList.SORT_DESCENDING);
         
         /* We found something. */
@@ -146,7 +146,6 @@ function Maintenance::UpgradeModel(vehicle_type, cargo) {
                 if(!AIOrder.IsGotoDepotOrder(vehicle, AIOrder.ORDER_CURRENT)) {
                     if(AIVehicle.SendVehicleToDepotForServicing(vehicle)) {
                         sent_to_upgrade++;
-                        AILog.Info("Replacing " + AIEngine.GetName(current_model) + " with " + AIEngine.GetName(replace_model));
                     } else
                         AILog.Error("Failed to send the vehicle for servicing: " + AIError.GetLastErrorString());
                 }
