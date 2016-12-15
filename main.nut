@@ -10,7 +10,6 @@ class ShipAI extends AIController {
 
 function ShipAI::Save() { return {}; }
 
-
 function ShipAI::Start() {
     SetCompanyName();    
     

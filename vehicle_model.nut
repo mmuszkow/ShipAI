@@ -61,3 +61,21 @@ function VehicleModelForCargoExists(vehicle_type, cargo) {
     models.KeepValue(1);
     return !models.IsEmpty();
 }
+
+/* Returns the minimal capacity of vehicle that can transport this cargo. */
+function VehicleModelMinCapacity(vehicle_type, cargo) {
+    local models = AIEngineList(vehicle_type);
+    models.Valuate(VehicleModelCanTransportCargo, cargo);
+    models.KeepValue(1);
+    
+    if(models.IsEmpty())
+        return -1;
+    
+    /* This is a capacity for the main cargo, 
+       there is no nice way to determine the capacity for the specific cargo. 
+       https://www.tt-forums.net/viewtopic.php?t=61021
+     */
+    models.Valuate(AIEngine.GetCapacity);
+    models.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
+    return AIEngine.GetCapacity(models.Begin());
+}

@@ -11,8 +11,6 @@ class Ferry extends Water {
     min_population = 500;
     /* Max Manhattan distance between 2 cities to open a new connection. */
     max_distance = 300;
-    /* Min passengers to open a new route. */
-    min_passengers = 150;
     
     /* Passengers cargo id. */
     _passenger_cargo_id = -1;
@@ -43,10 +41,32 @@ function Ferry::AreFerriesAllowed() {
     return AreShipsAllowed() && VehicleModelForCargoExists(AIVehicle.VT_WATER, this._passenger_cargo_id);
 }
 
+/* Estimate passengers production per month. This is veeery rough. */
+function Ferry::EstimatePassengersPerMonth(dock_tile) {
+    local station_id = AIStation.GetStationID(dock_tile);
+    
+    // it always return 0 ...
+    //local cargo_per_month = AIStation.GetCargoPlanned(station_id, this._passenger_cargo_id);
+    local cargo_per_month = AITile.GetCargoAcceptance(dock_tile, this._passenger_cargo_id, 1, 1, AIStation.GetCoverageRadius(AIStation.STATION_DOCK));
+    
+    /* Some % of cargo is already transported. */
+    if(AIStation.HasCargoRating(station_id, this._passenger_cargo_id))
+        return (((100 - AIStation.GetCargoRating(station_id, this._passenger_cargo_id)) / 100.0) * cargo_per_month).tointeger()
+    
+    /* Virgin station. */
+    return cargo_per_month;
+}
+
 function Ferry::BuildFerryRoutes() {
     local ferries_built = 0;
     if(!this.AreFerriesAllowed())
-        return ferries_built;
+        return 0;
+    
+    local min_capacity = VehicleModelMinCapacity(AIVehicle.VT_WATER, this._passenger_cargo_id);
+    if(min_capacity == -1)
+        return 0;
+    
+    AILog.Info("PASS min capacity: " + min_capacity);
     
     local towns = AITownList();
     towns.Valuate(AITown.GetPopulation);
@@ -59,7 +79,7 @@ function Ferry::BuildFerryRoutes() {
         /* If there is already a dock in the city and there 
            are not many passengers waiting there, there is no point
            in opening a new route. */
-        if(dock1 != -1 && AIStation.GetCargoWaiting(AIStation.GetStationID(dock1), this._passenger_cargo_id) < this.min_passengers)
+        if(dock1 != -1 && AIStation.GetCargoWaiting(AIStation.GetStationID(dock1), this._passenger_cargo_id) < 2 * min_capacity)
             continue;
         
         /* Find dock or potential place for dock. */
@@ -81,23 +101,23 @@ function Ferry::BuildFerryRoutes() {
             /* If there is already a dock in the city and there 
                are not many passengers waiting there, there is no point
                in opening a new route. */
-            if(dock2 != -1 && AIStation.GetCargoWaiting(AIStation.GetStationID(dock2), this._passenger_cargo_id) < this.min_passengers)
+            if(dock2 != -1 && AIStation.GetCargoWaiting(AIStation.GetStationID(dock2), this._passenger_cargo_id) < 2 * min_capacity)
                 continue;
             
             /* If there is already a vehicle servicing this route, clone it, it's much faster. */
-            if(dock1 != -1 && dock2 != -1) {
-                local clone_res = CloneShip(dock1, dock2, this._passenger_cargo_id);
-                if(clone_res == 2) {
-                    AILog.Info("Adding next ferry between " + AITown.GetName(town) + " and " + AITown.GetName(town2));
-                    ferries_built++;
-                    continue;
-                } else if(clone_res == 1) {
-                    /* Error. */
-                    if(!AreFerriesAllowed())
-                        return ferries_built;
-                    continue;
-                }
-            }
+            // if(dock1 != -1 && dock2 != -1) {
+                // local clone_res = CloneShip(dock1, dock2, this._passenger_cargo_id);
+                // if(clone_res == 2) {
+                    // AILog.Info("Adding next ferry between " + AITown.GetName(town) + " and " + AITown.GetName(town2));
+                    // ferries_built++;
+                    // continue;
+                // } else if(clone_res == 1) {
+                    // /* Error. */
+                    // if(!AreFerriesAllowed())
+                        // return ferries_built;
+                    // continue;
+                // }
+            // }
                         
             /* Find dock or potential place for dock. */
             local coast2 = dock2;
@@ -138,9 +158,9 @@ function Ferry::BuildFerryRoutes() {
                 AILog.Error("Failed to build the dock in " + AITown.GetName(town2) + ": " + AIError.GetLastErrorString());
                 continue;
             }
-        
+
             /* Buy and schedule ship. */
-            if(BuildAndStartShip(dock1, dock2, this._passenger_cargo_id, path, false, 150))
+            if(BuildAndStartShip(dock1, dock2, this._passenger_cargo_id, path, false, max(EstimatePassengersPerMonth(dock1), EstimatePassengersPerMonth(dock2))))
                 ferries_built++;
             else if(!AreFerriesAllowed())
                 return ferries_built;

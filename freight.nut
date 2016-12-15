@@ -29,10 +29,13 @@ function FreightShip::BuildTownFreightRoutes() {
     cargos.RemoveValue(AICargo.TE_NONE); /* Only cargos that are accepted by towns. */
     
     for(local cargo = cargos.Begin(); cargos.HasNext(); cargo = cargos.Next()) {
-        
-        /* Check if we can transport this cargo. */
-        if(!VehicleModelForCargoExists(AIVehicle.VT_WATER, cargo))
+                
+        local min_capacity = VehicleModelMinCapacity(AIVehicle.VT_WATER, cargo);
+        /* There is no vehicle to transport this cargo. */
+        if(min_capacity == -1)
             continue;
+        
+        AILog.Info(AICargo.GetCargoLabel(cargo) + " min capacity: " + min_capacity);
         
         local producers = AIIndustryList_CargoProducing(cargo);
         producers.Valuate(AIIndustry.GetLastMonthProduction, cargo);
@@ -54,12 +57,12 @@ function FreightShip::BuildTownFreightRoutes() {
             acceptors.KeepBelowValue(this.max_distance);
             acceptors.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
             
-            /* Skip those serviced and with less than 100 units of cargo waiting. */
+            /* Skip those serviced with little cargo waiting. */
             local dock1 = FindDockNearIndustry(producer, true);
             if(dock1 != 1) {
                 local station_id = AIStation.GetStationID(dock1);
                 if(    AIStation.HasCargoRating(station_id, cargo)
-                    && AIStation.GetCargoWaiting(station_id, cargo) < 100)
+                    && AIStation.GetCargoWaiting(station_id, cargo) < min_capacity)
                     continue;
             }
             
@@ -81,21 +84,21 @@ function FreightShip::BuildTownFreightRoutes() {
                 local dock2 = FindDockNearTown(acceptor, cargo);
                 
                 /* If there is already a vehicle servicing this route, clone it, it's much faster. */
-                if(dock1 != -1 && dock2 != -1) {
-                    local clone_res = CloneShip(dock1, dock2, cargo);
-                    if(clone_res == 2) {
-                        AILog.Info("Adding next " + AICargo.GetCargoLabel(cargo) + " route between " 
-                                + AIStation.GetName(AIStation.GetStationID(dock1)) + " and " 
-                                + AIStation.GetName(AIStation.GetStationID(dock2)));
-                        ships_built++;
-                        break;
-                    } else if(clone_res == 1) {
-                        /* Error. */
-                        if(!AreShipsAllowed())
-                            return ships_built;
-                        break;
-                    }
-                }
+                // if(dock1 != -1 && dock2 != -1) {
+                    // local clone_res = CloneShip(dock1, dock2, cargo);
+                    // if(clone_res == 2) {
+                        // AILog.Info("Adding next " + AICargo.GetCargoLabel(cargo) + " route between " 
+                                // + AIStation.GetName(AIStation.GetStationID(dock1)) + " and " 
+                                // + AIStation.GetName(AIStation.GetStationID(dock2)));
+                        // ships_built++;
+                        // break;
+                    // } else if(clone_res == 1) {
+                        // /* Error. */
+                        // if(!AreShipsAllowed())
+                            // return ships_built;
+                        // break;
+                    // }
+                // }
                 
                 local coast2 = dock2;
                 if(coast2 == -1)
@@ -155,9 +158,12 @@ function FreightShip::BuildIndustryFreightRoutes() {
     
     for(local cargo = cargos.Begin(); cargos.HasNext(); cargo = cargos.Next()) {
         
-        /* Check if we can transport this cargo. */
-        if(!VehicleModelForCargoExists(AIVehicle.VT_WATER, cargo))
+        local min_capacity = VehicleModelMinCapacity(AIVehicle.VT_WATER, cargo);
+        /* There is no vehicle to transport this cargo. */
+        if(min_capacity == -1)
             continue;
+        
+        AILog.Info(AICargo.GetCargoLabel(cargo) + " min capacity: " + min_capacity);
         
         /* Get producers. */
         local producers = AIIndustryList_CargoProducing(cargo);
@@ -181,11 +187,11 @@ function FreightShip::BuildIndustryFreightRoutes() {
 
             local dock1 = FindDockNearIndustry(producer, true);
             
-            /* Skip those serviced and with less than 100 units of cargo waiting. */
+            /* Skip those serviced with little cargo waiting. */
             if(dock1 != 1) {
                 local station_id = AIStation.GetStationID(dock1);
                 if(    AIStation.HasCargoRating(station_id, cargo)
-                    && AIStation.GetCargoWaiting(station_id, cargo) < 100)
+                    && AIStation.GetCargoWaiting(station_id, cargo) < min_capacity)
                     continue;
             }
             
@@ -240,21 +246,21 @@ function FreightShip::BuildIndustryFreightRoutes() {
                 local dock2 = FindDockNearIndustry(acceptor, false);
                 
                 /* If there is already a vehicle servicing this route, clone it, it's much faster. */
-                if(dock1 != -1 && dock2 != -1) {
-                    local clone_res = CloneShip(dock1, dock2, cargo);
-                    if(clone_res == 2) {
-                        AILog.Info("Adding next " + AICargo.GetCargoLabel(cargo) + " route between " 
-                                + AIStation.GetName(AIStation.GetStationID(dock1)) + " and " 
-                                + AIStation.GetName(AIStation.GetStationID(dock2)));
-                        ships_built++;
-                        break;
-                    } else if(clone_res == 1) {
-                        /* Error. */
-                        if(!AreShipsAllowed())
-                            return ships_built;
-                        break;
-                    }
-                }
+                // if(dock1 != -1 && dock2 != -1) {
+                    // local clone_res = CloneShip(dock1, dock2, cargo);
+                    // if(clone_res == 2) {
+                        // AILog.Info("Adding next " + AICargo.GetCargoLabel(cargo) + " route between " 
+                                // + AIStation.GetName(AIStation.GetStationID(dock1)) + " and " 
+                                // + AIStation.GetName(AIStation.GetStationID(dock2)));
+                        // ships_built++;
+                        // break;
+                    // } else if(clone_res == 1) {
+                        // /* Error. */
+                        // if(!AreShipsAllowed())
+                            // return ships_built;
+                        // break;
+                    // }
+                // }
                 
                 local coast2 = dock2;
                 if(coast2 == -1)

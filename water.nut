@@ -139,8 +139,10 @@ function Water::FindDockNearTown(town, cargo) {
 function Water::BuildDockInTown(town, cargo) {
     local coast = GetCoastTilesNearTown(town, this.max_city_dock_distance, cargo);
     local city = AITown.GetLocation(town);
-    coast.Valuate(AIMap.DistanceManhattan, city);
-    coast.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
+    /* Sort by how much passengers this tile covers. */
+    coast.Valuate(AITile.GetCargoAcceptance, cargo, 1, 1,
+                  AIStation.GetCoverageRadius(AIStation.STATION_DOCK));
+    coast.Sort(AIList.SORT_BY_VALUE, AIList.SORT_DESCENDING);
     
     /* Wait until we have the money. */
     while(AIMarine.GetBuildCost(AIMarine.BT_DOCK) > AICompany.GetBankBalance(AICompany.COMPANY_SELF) - this.min_balance) {}

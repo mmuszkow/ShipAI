@@ -18,7 +18,6 @@ class Maintenance {
         AIGroup.SetName(this.sell_group[1], AICompany.GetName(AICompany.COMPANY_SELF) + "'s ships to sell");
         if(!AIGroup.IsValidGroup(this.sell_group[0]) || !AIGroup.IsValidGroup(this.sell_group[1]))
             AILog.Error("Cannot create a vehicles group");
-        
     }
 }
 
@@ -88,6 +87,8 @@ function Maintenance::SellUnprofitable() {
 
 /* Replaces model with better model, if possible. */
 function Maintenance::UpgradeModel(vehicle_type, cargo) {
+    return 0; // TODO
+    
     local sent_to_upgrade = 0;
     
     /* Let's check what possible engines we have for this cargo. */
