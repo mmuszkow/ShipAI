@@ -30,7 +30,7 @@ function FreightShip::BuildTownFreightRoutes() {
     
     for(local cargo = cargos.Begin(); cargos.HasNext(); cargo = cargos.Next()) {
                 
-        local min_capacity = VehicleModelMinCapacity(AIVehicle.VT_WATER, cargo);
+        local min_capacity = VehicleModelMinCapacity(AIVehicle.VT_WATER, cargo, this._capacity_cache);
         /* There is no vehicle to transport this cargo. */
         if(min_capacity == -1)
             continue;
@@ -158,7 +158,7 @@ function FreightShip::BuildIndustryFreightRoutes() {
     
     for(local cargo = cargos.Begin(); cargos.HasNext(); cargo = cargos.Next()) {
         
-        local min_capacity = VehicleModelMinCapacity(AIVehicle.VT_WATER, cargo);
+        local min_capacity = VehicleModelMinCapacity(AIVehicle.VT_WATER, cargo, this._capacity_cache);
         /* There is no vehicle to transport this cargo. */
         if(min_capacity == -1)
             continue;

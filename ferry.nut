@@ -62,7 +62,7 @@ function Ferry::BuildFerryRoutes() {
     if(!this.AreFerriesAllowed())
         return 0;
     
-    local min_capacity = VehicleModelMinCapacity(AIVehicle.VT_WATER, this._passenger_cargo_id);
+    local min_capacity = VehicleModelMinCapacity(AIVehicle.VT_WATER, this._passenger_cargo_id, this._capacity_cache);
     if(min_capacity == -1)
         return 0;
     

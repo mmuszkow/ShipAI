@@ -12,6 +12,9 @@ class Water {
     /* Path buoys distance. */
     buoy_distance = 25;
     
+    /* Used by vehicle model utils to get real vehicle capacity: https://www.tt-forums.net/viewtopic.php?t=61021 */
+    _capacity_cache = AIList();
+    
     constructor() {}
 }
 
@@ -97,7 +100,7 @@ function Water::AreShipsAllowed() {
 }
 
 function Water::BuildShip(depot, cargo, round_trip_distance, monthly_production) {
-    local engine = GetBestVehicleModelForCargo(AIVehicle.VT_WATER, cargo, round_trip_distance, monthly_production);
+    local engine = GetBestVehicleModelForCargo(AIVehicle.VT_WATER, cargo, this._capacity_cache, round_trip_distance, monthly_production);
     if(!AIEngine.IsValidEngine(engine))
         return -1;
         
