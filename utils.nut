@@ -27,3 +27,49 @@ function IsSimpleSlope(tile) {
         || slope == AITile.SLOPE_SE
         || slope == AITile.SLOPE_SW;
 }
+
+/* This is global to save checking cost in every valuate call. */
+areCanalsAllowed <- false;
+
+function SetCanalsAllowedFlag() {    
+    areCanalsAllowed =  AIController.GetSetting("build_canals") && 
+                        (AICompany.GetBankBalance(AICompany.COMPANY_SELF) > 2 * AICompany.GetMaxLoanAmount());
+}
+
+function GetHillFrontTile(hill, dist) {
+    switch(AITile.GetSlope(hill)) {
+        case AITile.SLOPE_NE:
+            /* West */
+            return hill + AIMap.GetTileIndex(dist, 0);
+        case AITile.SLOPE_NW:
+            /* South. */
+            return hill + AIMap.GetTileIndex(0, dist);
+        case AITile.SLOPE_SE:
+            /* North. */
+            return hill + AIMap.GetTileIndex(0, -dist);
+        case AITile.SLOPE_SW:
+            /* East. */
+            return hill + AIMap.GetTileIndex(-dist, 0);
+        default:
+            return -1;
+    }
+}
+
+function GetHillBackTile(hill, dist) {
+    switch(AITile.GetSlope(hill)) {
+        case AITile.SLOPE_NE:
+            /* West */
+            return hill + AIMap.GetTileIndex(-dist, 0);
+        case AITile.SLOPE_NW:
+            /* South. */
+            return hill + AIMap.GetTileIndex(0, -dist);
+        case AITile.SLOPE_SE:
+            /* North. */
+            return hill + AIMap.GetTileIndex(0, dist);
+        case AITile.SLOPE_SW:
+            /* East. */
+            return hill + AIMap.GetTileIndex(dist, 0);
+        default:
+            return -1;
+    }
+}

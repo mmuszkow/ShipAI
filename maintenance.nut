@@ -1,10 +1,10 @@
-require("vehicle_model.nut");
+require("ship_model.nut");
 
 /* Class which handles selling unprofitable, upgrading and replacing old vehicles. */
 class Maintenance {
     
     /* Group for vehicles to be sold. */
-    sell_group = [-1, -1];
+    sell_group = -1;
     
     constructor() {
         /* Autorenew vehicles when old. */
@@ -12,11 +12,9 @@ class Maintenance {
         AICompany.SetAutoRenewStatus(true);
         
         /* Create groups. */
-        this.sell_group[0] = AIGroup.CreateGroup(AIVehicle.VT_AIR);
-        this.sell_group[1] = AIGroup.CreateGroup(AIVehicle.VT_WATER);
-        AIGroup.SetName(this.sell_group[0], AICompany.GetName(AICompany.COMPANY_SELF) + "'s aircrafts to sell");
-        AIGroup.SetName(this.sell_group[1], AICompany.GetName(AICompany.COMPANY_SELF) + "'s ships to sell");
-        if(!AIGroup.IsValidGroup(this.sell_group[0]) || !AIGroup.IsValidGroup(this.sell_group[1]))
+        this.sell_group = AIGroup.CreateGroup(AIVehicle.VT_WATER);
+        AIGroup.SetName(this.sell_group, AICompany.GetName(AICompany.COMPANY_SELF) + "'s ships to sell");
+        if(!AIGroup.IsValidGroup(this.sell_group))
             AILog.Error("Cannot create a vehicles group");
     }
 }
@@ -25,8 +23,7 @@ function Maintenance::SellUnprofitable() {
     local sold = 0;
     
     /* Sell unprofitable in depots. */
-    local unprofitable = AIVehicleList_Group(this.sell_group[0]);
-    unprofitable.AddList(AIVehicleList_Group(this.sell_group[1]));
+    local unprofitable = AIVehicleList_Group(this.sell_group);
     for(local vehicle = unprofitable.Begin(); unprofitable.HasNext(); vehicle = unprofitable.Next()) {
         if(AIVehicle.IsStoppedInDepot(vehicle))
             if(AIVehicle.SellVehicle(vehicle))
@@ -37,7 +34,6 @@ function Maintenance::SellUnprofitable() {
 
     /* Find unprofitable. */
     unprofitable = AIVehicleList_DefaultGroup(AIVehicle.VT_WATER);
-    unprofitable.AddList(AIVehicleList_DefaultGroup(AIVehicle.VT_AIR));
     unprofitable.Valuate(AIVehicle.GetProfitLastYear);
     unprofitable.KeepBelowValue(0);
     unprofitable.Valuate(AIVehicle.GetProfitThisYear);
@@ -72,14 +68,7 @@ function Maintenance::SellUnprofitable() {
         }
         
         /* We remove them from default group to avoid looping. */
-        switch(AIVehicle.GetVehicleType(vehicle)) {
-            case AIVehicle.VT_AIR:
-                AIGroup.MoveVehicle(this.sell_group[0], vehicle);
-                break;
-            case AIVehicle.VT_WATER:
-                AIGroup.MoveVehicle(this.sell_group[1], vehicle);
-                break;
-        }
+        AIGroup.MoveVehicle(this.sell_group, vehicle);
     }
     
     return sold;

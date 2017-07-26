@@ -1,7 +1,6 @@
 require("ferry.nut");
 require("freight.nut");
 require("maintenance.nut");
-require("terraforming.nut");
 require("utils.nut");
 
 class ShipAI extends AIController {
@@ -13,10 +12,9 @@ function ShipAI::Save() { return {}; }
 function ShipAI::Start() {
     SetCompanyName();    
     
-    local freight = FreightShip();
+    local freight = Freight();
     local ferry = Ferry();
     local maintenance = Maintenance();
-    local terra = Terraforming();
     
     /* Check if we have anything to do, if not repay the loan and wait. */
     if(!freight.AreShipsAllowed()) {
@@ -25,8 +23,7 @@ function ShipAI::Start() {
     }
     while(!freight.AreShipsAllowed()) { this.Sleep(1000); }
     
-    local loan_limit = AICompany.GetMaxLoanAmount();
-    AICompany.SetLoanAmount(loan_limit);
+    AICompany.SetLoanAmount(AICompany.GetMaxLoanAmount());
     
     local cargos = AICargoList();
     while(true) {    
@@ -54,8 +51,6 @@ function ShipAI::Start() {
         if(upgraded > 0) AILog.Info("Ships sent for upgrading: " + upgraded);
         if(statues_founded > 1) AILog.Info("Statues founded: " + statues_founded);
         
-        //terra.BuildCanals();
-        
         AICompany.SetLoanAmount(0);        
         this.Sleep(50);
     }
@@ -80,7 +75,7 @@ function ShipAI::SetCompanyName() {
 function ShipAI::BuildStatues() {
     local founded = 0;
     
-    if(AICompany.GetBankBalance(AICompany.COMPANY_SELF) < 10000000)
+    if(AICompany.GetBankBalance(AICompany.COMPANY_SELF) < 10 * AICompany.GetMaxLoanAmount())
         return founded;
     
     local towns = AITownList();
@@ -92,7 +87,7 @@ function ShipAI::BuildStatues() {
     towns.KeepValue(1);
     
     for(local town = towns.Begin(); towns.HasNext(); town = towns.Next()) {
-        if(AICompany.GetBankBalance(AICompany.COMPANY_SELF) < 10000000)
+        if(AICompany.GetBankBalance(AICompany.COMPANY_SELF) < 10 * AICompany.GetMaxLoanAmount())
             return founded;
         if(AITown.PerformTownAction(town, AITown.TOWN_ACTION_BUILD_STATUE)) {
             AILog.Info("Building statue in " + AITown.GetName(town));
