@@ -44,7 +44,7 @@ function Freight::BuildTownFreightRoutes() {
     
     for(local cargo = cargos.Begin(); cargos.HasNext(); cargo = cargos.Next()) {
                 
-        local min_capacity = this._ship_model.GetMinCapacityForCargo(cargo);
+        local min_capacity = ship_model.GetMinCapacityForCargo(cargo);
         /* There is no vehicle to transport this cargo. */
         if(min_capacity == -1)
             continue;
@@ -53,6 +53,8 @@ function Freight::BuildTownFreightRoutes() {
         local acceptors = GetTownsThatCanHaveDock(cargo);
         
         for(local producer_id = producers.Begin(); producers.HasNext(); producer_id = producers.Next()) {
+            
+            this._maintenance.PerformIfNeeded();
             
             /* Industry may cease to exist. */
             if(!AIIndustry.IsValidIndustry(producer_id))
@@ -140,6 +142,8 @@ function Freight::BuildTownFreightRoutes() {
         }
     }
     
+    this._maintenance.Perform();
+    
     return ships_built;
 }
 
@@ -158,18 +162,19 @@ function Freight::BuildIndustryFreightRoutes() {
     
     for(local cargo = cargos.Begin(); cargos.HasNext(); cargo = cargos.Next()) {
         
-        local min_capacity = this._ship_model.GetMinCapacityForCargo(cargo);
+        local min_capacity = ship_model.GetMinCapacityForCargo(cargo);
         /* There is no vehicle to transport this cargo. */
         if(min_capacity == -1)
             continue;
         
-        /* Get acceptors. */
+        local producers = GetProducersThatCanHaveDock(cargo);
         local acceptors = AIIndustryList_CargoAccepting(cargo);
         acceptors.Valuate(_val_IndustryCanHaveDock, false);
         acceptors.RemoveValue(0);
         
-        local producers = GetProducersThatCanHaveDock(cargo);
         for(local producer_id = producers.Begin(); producers.HasNext(); producer_id = producers.Next()) {
+            
+            this._maintenance.PerformIfNeeded();
             
             /* Industry may cease to exist. */
             if(!AIIndustry.IsValidIndustry(producer_id))
@@ -281,6 +286,8 @@ function Freight::BuildIndustryFreightRoutes() {
             }
         }
     }
+    
+    this._maintenance.Perform();
     
     return ships_built;
 }

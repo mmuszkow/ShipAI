@@ -96,3 +96,26 @@ function ShipModel::GetMinCapacityForCargo(cargo) {
     models.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
     return AIEngine.GetCapacity(models.Begin());
 }
+
+function ShipModel::GetReplacementModel(model, cargo, capacity) {
+    local better = AIEngineList(AIVehicle.VT_WATER);
+    better.Valuate(_val_ShipModelCanTransportCargo, cargo);
+    better.KeepValue(1);
+    better.RemoveItem(model);
+    better.Valuate(AIEngine.GetCapacity);
+    /* Models with 80-160% capacity and higher max speed. 
+       Why 160%? Cause it covers the standard ship GRFs...
+       https://wiki.openttd.org/Ship_Comparison
+     */
+    better.RemoveBelowValue((0.8 * capacity).tointeger());
+    better.RemoveAboveValue((1.6 * capacity).tointeger());
+    better.Valuate(AIEngine.GetMaxSpeed);
+    if(AIEngine.IsValidEngine(model))
+        better.RemoveBelowValue(AIEngine.GetMaxSpeed(model));
+    if(better.IsEmpty())
+        return -1;
+    
+    better.Valuate(_val_ShipModelRating, cargo, this._capacity_cache);
+    better.Sort(AIList.SORT_BY_VALUE, AIList.SORT_DESCENDING);
+    return better.Begin();
+}

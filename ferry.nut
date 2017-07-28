@@ -17,7 +17,7 @@ class Ferry extends Water {
 }
    
 function Ferry::AreFerriesAllowed() {
-    return AreShipsAllowed() && _ship_model.ExistsForCargo(this._passenger_cargo_id);
+    return AreShipsAllowed() && ship_model.ExistsForCargo(this._passenger_cargo_id);
 }
 
 function Ferry::GetTownsThatCanHavePassengerDock() {
@@ -53,13 +53,16 @@ function Ferry::BuildFerryRoutes() {
     
     SetCanalsAllowedFlag();
     
-    local min_capacity = this._ship_model.GetMinCapacityForCargo(this._passenger_cargo_id);
+    local min_capacity = ship_model.GetMinCapacityForCargo(this._passenger_cargo_id);
     if(min_capacity == -1)
         return 0;
         
     local towns = GetTownsThatCanHavePassengerDock();
     
     for(local town_id = towns.Begin(); towns.HasNext(); town_id = towns.Next()) {
+        
+        this._maintenance.PerformIfNeeded();
+        
         local town = Town(town_id);
         local dock1 = town.GetExistingDock(this._passenger_cargo_id);
         
@@ -76,7 +79,6 @@ function Ferry::BuildFerryRoutes() {
         towns2.Valuate(AITown.GetDistanceManhattanToTile, AITown.GetLocation(town_id));
         towns2.KeepBelowValue(this.max_distance); /* Cities too far away. */
         towns2.KeepAboveValue(this.min_distance); /* Cities too close. */
-        towns2.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
         
         for(local town2_id = towns2.Begin(); towns2.HasNext(); town2_id = towns2.Next()) {
             local town2 = Town(town2_id);
@@ -118,7 +120,7 @@ function Ferry::BuildFerryRoutes() {
         }
     }
             
-    //this._not_connected_cache.Debug();
+    this._maintenance.Perform();
     
     return ferries_built;
 }

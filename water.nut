@@ -1,6 +1,7 @@
 require("dock.nut");
 require("industry.nut");
-require("ship_model.nut");
+require("global.nut");
+require("maintenance.nut");
 require("ship_path.nut");
 require("town.nut");
 require("utils.nut");
@@ -15,15 +16,15 @@ class Water {
     /* Max Manhattan distance between 2 points to open a new connection. */
     max_distance = 300;
     /* Max path length. */
-    max_path_len = 450;
+    max_path_len = 400;
     /* Max dock distance from the city center. */
     max_city_dock_distance = 20;
     /* Minimal money left after buying something. */
     min_balance = 20000;
     
-    /* Used to choose ships models. */
-    _ship_model = ShipModel();
-    /* Cache of which points are not connected. */
+    /* Maintenance helper. */
+    _maintenance = null;
+    /* Cache for points that are not connected. */
     _not_connected_cache = AIList();
     
     /* Pathfinders. */
@@ -31,7 +32,9 @@ class Water {
     _coast_pathfinder = CoastPathfinder();
     _canal_pathfinder = CanalPathfinder();
     
-    constructor() {}
+    constructor() {
+        _maintenance = Maintenance();
+    }
 }
 
 /* Checks if building ships is possible. */
@@ -298,7 +301,7 @@ function Water::FindWaterPath(dock1, dock2, max_len) {
 }
 
 function Water::BuildShip(depot, cargo, round_trip_distance, monthly_production) {    
-    local engine = _ship_model.GetBestModelForCargo(cargo, round_trip_distance, monthly_production);
+    local engine = ship_model.GetBestModelForCargo(cargo, round_trip_distance, monthly_production);
     if(!AIEngine.IsValidEngine(engine)) {
         AILog.Error("No vehicle model to transport " + AICargo.GetCargoLabel(cargo) +
                     " with monthly production = " + monthly_production +
@@ -333,7 +336,7 @@ function Water::BuildShip(depot, cargo, round_trip_distance, monthly_production)
 }
 
 function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_production) {
-    if(monthly_production <= 0 || !_ship_model.ExistsForCargo(cargo))
+    if(monthly_production <= 0 || !ship_model.ExistsForCargo(cargo))
         return false;
     
     /* Too close or too far. */
@@ -388,7 +391,6 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
     
     if(!AIOrder.AppendOrder(vehicle, dock1.tile, load_order)) {
         AILog.Error("Failed to schedule the ship for " + dock1.GetName() + "-" + dock2.GetName() + " route (1): " + AIError.GetLastErrorString());
-        path.Print();
         AISign.BuildSign(dock1.tile, "append (1)");
         AISign.BuildSign(dock2.tile, "append (1)");
         AIVehicle.SellVehicle(vehicle);
@@ -399,7 +401,6 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
     foreach(buoy in buoys)
         if(!AIOrder.AppendOrder(vehicle, buoy, AIOrder.OF_NONE)) {
             AILog.Error("Failed to schedule the ship for " + dock1.GetName() + "-" + dock2.GetName() + " route (2): " + AIError.GetLastErrorString());
-            path.Print();
             AISign.BuildSign(dock1.tile, "append (2)");
             AISign.BuildSign(dock2.tile, "append (2)");
             AISign.BuildSign(buoy, "buoy err");
@@ -409,7 +410,6 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
         
     if(!AIOrder.AppendOrder(vehicle, dock2.tile, AIOrder.OF_NONE)) {
         AILog.Error("Failed to schedule the ship for " + dock1.GetName() + "-" + dock2.GetName() + " route (3): " + AIError.GetLastErrorString());
-        path.Print();
         AISign.BuildSign(dock1.tile, "append (3)");
         AISign.BuildSign(dock2.tile, "append (3)");
         AIVehicle.SellVehicle(vehicle);
@@ -421,7 +421,6 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
     foreach(buoy in buoys)
         if(!AIOrder.AppendOrder(vehicle, buoy, AIOrder.OF_NONE)) {
             AILog.Error("Failed to schedule the ship for " + dock1.GetName() + "-" + dock2.GetName() + " route: " + AIError.GetLastErrorString());
-            path.Print();
             AIVehicle.SellVehicle(vehicle);
             return false;
         }

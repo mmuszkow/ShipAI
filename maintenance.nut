@@ -1,10 +1,12 @@
-require("ship_model.nut");
+require("global.nut");
 
 /* Class which handles selling unprofitable, upgrading and replacing old vehicles. */
 class Maintenance {
     
     /* Group for vehicles to be sold. */
-    sell_group = -1;
+    _sell_group = -1;
+    /* Last time when maintenance was performed. */
+    _maintenance_last_performed = AIDate.GetCurrentDate();
     
     constructor() {
         /* Autorenew vehicles when old. */
@@ -12,9 +14,13 @@ class Maintenance {
         AICompany.SetAutoRenewStatus(true);
         
         /* Create groups. */
-        this.sell_group = AIGroup.CreateGroup(AIVehicle.VT_WATER);
-        AIGroup.SetName(this.sell_group, AICompany.GetName(AICompany.COMPANY_SELF) + "'s ships to sell");
-        if(!AIGroup.IsValidGroup(this.sell_group))
+        this._sell_group = AIGroup.CreateGroup(AIVehicle.VT_WATER);
+        local i = 1;
+        while(!AIGroup.SetName(this._sell_group, "Ships to sell #" + i)) {
+            i = i + 1;
+            if(i > 255) break;
+        }
+        if(!AIGroup.IsValidGroup(this._sell_group))
             AILog.Error("Cannot create a vehicles group");
     }
 }
@@ -23,7 +29,7 @@ function Maintenance::SellUnprofitable() {
     local sold = 0;
     
     /* Sell unprofitable in depots. */
-    local unprofitable = AIVehicleList_Group(this.sell_group);
+    local unprofitable = AIVehicleList_Group(this._sell_group);
     for(local vehicle = unprofitable.Begin(); unprofitable.HasNext(); vehicle = unprofitable.Next()) {
         if(AIVehicle.IsStoppedInDepot(vehicle))
             if(AIVehicle.SellVehicle(vehicle))
@@ -68,66 +74,50 @@ function Maintenance::SellUnprofitable() {
         }
         
         /* We remove them from default group to avoid looping. */
-        AIGroup.MoveVehicle(this.sell_group, vehicle);
+        AIGroup.MoveVehicle(this._sell_group, vehicle);
     }
     
     return sold;
 }
 
 /* Replaces model with better model, if possible. */
-function Maintenance::UpgradeModel(vehicle_type, cargo) {
-    return 0; // TODO
-    
+function Maintenance::Upgrade() {   
     local sent_to_upgrade = 0;
-    
-    /* Let's check what possible engines we have for this cargo. */
-    local possible = AIEngineList(vehicle_type);
-    possible.Valuate(VehicleModelCanTransportCargo, cargo);
-    possible.KeepValue(1);
-    
-    /* None to replace with. */
-    if(possible.IsEmpty())
-        return sent_to_upgrade;
-    
-    /* Find the vehicles to be upgraded. */
-    local vehicles = AIVehicleList_DefaultGroup(vehicle_type);
-    vehicles.Valuate(AIVehicle.GetCapacity, cargo);
-    vehicles.KeepAboveValue(0);
-        
-    /* We need to have money. */
     local min_balance = AICompany.GetAutoRenewMoney(AICompany.COMPANY_SELF);
-    local balance = AICompany.GetBankBalance(AICompany.COMPANY_SELF);
     
-    for(local vehicle = vehicles.Begin(); vehicles.HasNext(); vehicle = vehicles.Next()) {
-        local current_model = AIVehicle.GetEngineType(vehicle);
-        local capacity = AIVehicle.GetCapacity(vehicle, cargo);
+    local cargos = AICargoList();
+    local replacements = AIList();
+    for(local cargo = cargos.Begin(); cargos.HasNext(); cargo = cargos.Next()) {
+        /* Let's check what possible engines we have for this cargo. */
+        if(!ship_model.ExistsForCargo(cargo))
+            continue;
         
-        /* Models with 80-160% capacity and higher max speed. 
-           Why 160%? Cause it covers the standard ship GRFs...
-           https://wiki.openttd.org/Ship_Comparison
-         */
-        local better = AIList();
-        better.AddList(possible);
-        better.RemoveItem(current_model);
-        better.Valuate(AIEngine.GetCapacity);
-        better.RemoveBelowValue((0.8 * capacity).tointeger());
-        better.RemoveAboveValue((1.6 * capacity).tointeger());
-        better.Valuate(AIEngine.GetMaxSpeed);
-        if(AIEngine.IsValidEngine(current_model))
-            better.RemoveBelowValue(AIEngine.GetMaxSpeed(current_model));
-        better.Valuate(VehicleModelRating);
-        better.Sort(AIList.SORT_BY_VALUE, AIList.SORT_DESCENDING);
+        /* Find the vehicles to be upgraded. */
+        local vehicles = AIVehicleList_DefaultGroup(AIVehicle.VT_WATER);
+        vehicles.Valuate(AIVehicle.GetCapacity, cargo);
+        vehicles.KeepAboveValue(0);
         
-        /* We found something. */
-        if(!better.IsEmpty()) {
-            local replace_model = better.Begin();
-            local double_price = 2 * AIEngine.GetPrice(replace_model);
+        for(local vehicle = vehicles.Begin(); vehicles.HasNext(); vehicle = vehicles.Next()) {
+            local current_model = AIVehicle.GetEngineType(vehicle);
+
+            local better_model = -1;
+            if(replacements.HasItem(current_model))
+                better_model = replacements.GetValue(current_model);
+            else {
+                better_model = ship_model.GetReplacementModel(current_model, cargo, AIVehicle.GetCapacity(vehicle, cargo));
+                replacements.AddItem(current_model, better_model);
+            }
+            
+            if(better_model == -1)
+                continue;
+            
+            local double_price = 2 * AIEngine.GetPrice(better_model);
             
             /* The company needs to have more money than (autoreplace money limit) + 2 * (price for new vehicle). */
-            if(balance < double_price + min_balance)
-                break;
+            if(AICompany.GetBankBalance(AICompany.COMPANY_SELF) < double_price + min_balance)
+                return sent_to_upgrade;
             
-            AIGroup.SetAutoReplace(AIGroup.GROUP_DEFAULT, current_model, replace_model);            
+            AIGroup.SetAutoReplace(AIGroup.GROUP_DEFAULT, current_model, better_model);
             
             /* We need to send the vehicle to depot to be replaced but we should do this only when the vehicle is close to the depot (1st or last order). */
             local last_order = AIOrder.GetOrderCount(vehicle) - 1;
@@ -144,4 +134,23 @@ function Maintenance::UpgradeModel(vehicle_type, cargo) {
     }
 
     return sent_to_upgrade;
+}
+
+function Maintenance::Perform() {
+    local unprofitable_sold = this.SellUnprofitable();
+    local upgraded = this.Upgrade();
+    if(unprofitable_sold > 0)
+        AILog.Info("Unprofitable vehicles sold: " + unprofitable_sold);
+    if(upgraded > 0)
+        AILog.Info("Ships sent for upgrading: " + upgraded);
+    
+    this._maintenance_last_performed = AIDate.GetCurrentDate();
+}
+
+/* This is performed once per year. */
+function Maintenance::PerformIfNeeded() {
+    if(AIDate.GetCurrentDate() - this._maintenance_last_performed < 365)
+        return;
+    
+    Perform();
 }

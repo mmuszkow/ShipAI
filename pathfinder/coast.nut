@@ -1,5 +1,4 @@
 /* Greedy path search, much faster than A* */
-/* TODO: caching */
 class CoastPathfinder {   
     tile = -1;
     next = -1;
@@ -40,8 +39,8 @@ function CoastPathfinder::_IsCoastTile(tile) {
 
 function _val_IsWaterTile(tile, include_docks = false) {
     return  (AITile.IsWaterTile(tile) && AITile.GetMaxHeight(tile) == 0) || /* exclude rivers */
-            (include_docks && AIMarine.IsDockTile(tile)) ||
             AIMarine.IsBuoyTile(tile) ||
+            (include_docks && AIMarine.IsDockTile(tile)) ||
             (AIMarine.IsLockTile(tile) && AITile.GetMaxHeight(tile) == 0) ||
             AIMarine.IsWaterDepotTile(tile);
 }

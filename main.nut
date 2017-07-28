@@ -1,6 +1,5 @@
 require("ferry.nut");
 require("freight.nut");
-require("maintenance.nut");
 require("utils.nut");
 
 class ShipAI extends AIController {
@@ -14,7 +13,6 @@ function ShipAI::Start() {
     
     local freight = Freight();
     local ferry = Ferry();
-    local maintenance = Maintenance();
     
     /* Check if we have anything to do, if not repay the loan and wait. */
     if(!freight.AreShipsAllowed()) {
@@ -25,30 +23,22 @@ function ShipAI::Start() {
     
     AICompany.SetLoanAmount(AICompany.GetMaxLoanAmount());
     
-    local cargos = AICargoList();
-    while(true) {    
-        /* Build new ships. */
+    while(true) {          
+        /* Build industry-industry & industry-town connections. */
         local new_freights = freight.BuildIndustryFreightRoutes();
         new_freights += freight.BuildTownFreightRoutes();
+        
+        /* Build town-town connections. */
         local new_ferries = ferry.BuildFerryRoutes();
         
-        /* Sell unprofiltable vehicles. */
-        local unprofitable_sold = maintenance.SellUnprofitable();
-
-        local upgraded = 0;
-        for(local cargo = cargos.Begin(); cargos.HasNext(); cargo = cargos.Next())
-            upgraded += maintenance.UpgradeModel(AIVehicle.VT_WATER, cargo);
-        
-        /* Build statues when nothing better to do, they increase the stations rating. */
+        /* Build statues when nothing better to do, they increase the stations ratings. */
         local statues_founded = 0;
-        if(new_freights == 0 && new_ferries == 0 && upgraded == 0)
+        if(new_freights == 0 && new_ferries == 0)
             statues_founded = BuildStatues();
         
         /* Print summary/ */
         if(new_freights > 1) AILog.Info("New freight routes: " + new_freights);
         if(new_ferries > 1) AILog.Info("New ferry routes: " + new_ferries);
-        if(unprofitable_sold > 0) AILog.Info("Unprofitable vehicles sold: " + unprofitable_sold);
-        if(upgraded > 0) AILog.Info("Ships sent for upgrading: " + upgraded);
         if(statues_founded > 1) AILog.Info("Statues founded: " + statues_founded);
         
         AICompany.SetLoanAmount(0);        

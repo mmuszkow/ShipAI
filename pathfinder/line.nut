@@ -11,8 +11,8 @@ class StraightLinePathfinder {
 
 function StraightLinePathfinder::_IsWater(tile) {
     return (AITile.IsWaterTile(tile) && AITile.GetMaxHeight(tile) == 0) || /* eliminates rivers */
-            AIMarine.IsDockTile(tile) ||
             AIMarine.IsBuoyTile(tile) ||
+            AIMarine.IsDockTile(tile) ||
             AIMarine.IsLockTile(tile) ||
             AIMarine.IsWaterDepotTile(tile);
 }

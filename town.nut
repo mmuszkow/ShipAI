@@ -44,10 +44,10 @@ function _val_TownCanHaveDock(town_id, range, cargo) {
 }
 
 function Town::GetExistingDock(cargo) {
+    local radius = AIStation.GetCoverageRadius(AIStation.STATION_DOCK);
     local docks = AIStationList(AIStation.STATION_DOCK);
     docks.Valuate(AIStation.GetNearestTown);
-    docks.KeepValue(this.id);
-    local radius = AIStation.GetCoverageRadius(AIStation.STATION_DOCK);
+    docks.KeepValue(this.id);    
     for(local dock = docks.Begin(); docks.HasNext(); dock = docks.Next()) {
         local dock_loc = AIStation.GetLocation(dock);
         if(AITile.GetCargoAcceptance(dock_loc, cargo, 1, 1, radius) > 7)

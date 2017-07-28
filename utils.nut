@@ -28,14 +28,6 @@ function IsSimpleSlope(tile) {
         || slope == AITile.SLOPE_SW;
 }
 
-/* This is global to save checking cost in every valuate call. */
-areCanalsAllowed <- false;
-
-function SetCanalsAllowedFlag() {    
-    areCanalsAllowed =  AIController.GetSetting("build_canals") && 
-                        (AICompany.GetBankBalance(AICompany.COMPANY_SELF) > 2 * AICompany.GetMaxLoanAmount());
-}
-
 function GetHillFrontTile(hill, dist) {
     switch(AITile.GetSlope(hill)) {
         case AITile.SLOPE_NE:
