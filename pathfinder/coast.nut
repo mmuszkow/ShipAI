@@ -1,3 +1,5 @@
+require("../global.nut");
+
 /* Greedy path search, much faster than A* */
 class CoastPathfinder {   
     tile = -1;
@@ -16,19 +18,19 @@ function CoastPathfinder::_GetNextTile(tile, dir) {
         /* North. */
         case 0:
             if(y <= 1) return -1;
-            return tile + AIMap.GetTileIndex(0, -1);
+            return tile + NORTH;
         /* West. */
         case 1:
             if(x >= AIMap.GetMapSizeX()) return -1;
-            return tile + AIMap.GetTileIndex(1, 0);
+            return tile + WEST;
         /* South. */
         case 2:
             if(y >= AIMap.GetMapSizeY()) return -1;
-            return tile + AIMap.GetTileIndex(0, 1);
+            return tile + SOUTH;
         /* East. */
         case 3:
             if(x <= 1) return -1;
-            return tile + AIMap.GetTileIndex(-1, 0);
+            return tile + EAST;
     }
     return -1;
 }
@@ -37,24 +39,26 @@ function CoastPathfinder::_IsCoastTile(tile) {
     return AITile.IsCoastTile(tile) || AIMarine.IsDockTile(tile);
 }
 
-function _val_IsWaterTile(tile, include_docks = false) {
+function CoastPathfinder::_IsWaterTile(tile) {
     return  (AITile.IsWaterTile(tile) && AITile.GetMaxHeight(tile) == 0) || /* exclude rivers */
             AIMarine.IsBuoyTile(tile) ||
-            (include_docks && AIMarine.IsDockTile(tile)) ||
+            AIMarine.IsDockTile(tile) ||
             (AIMarine.IsLockTile(tile) && AITile.GetMaxHeight(tile) == 0) ||
             AIMarine.IsWaterDepotTile(tile);
 }
 
 /* Checks if we are next to coast. */
 function CoastPathfinder::_IsWaterNextToCoast(water) {
-    if(!_val_IsWaterTile(water))
-        return false;
-    
-    local tiles = AITileList();
-    SafeAddRectangle(tiles, water, 1);
-    tiles.Valuate(_val_IsWaterTile, false);
-    tiles.RemoveValue(1);
-    return tiles.Count() > 0;
+    return (_IsWaterTile(water) && (
+        !_IsWaterTile(water + NORTH) || 
+        !_IsWaterTile(water + SOUTH) || 
+        !_IsWaterTile(water + EAST) || 
+        !_IsWaterTile(water + WEST) || 
+        !_IsWaterTile(water + AIMap.GetTileIndex(-1, 1)) || 
+        !_IsWaterTile(water + AIMap.GetTileIndex(1, 1)) || 
+        !_IsWaterTile(water + AIMap.GetTileIndex(-1, -1)) || 
+        !_IsWaterTile(water + AIMap.GetTileIndex(1, -1))
+    ));
 }
 
 /* Changes direction, options is a possible directions list. */
@@ -104,14 +108,14 @@ function CoastPathfinder::FindPath(coast1, coast2, max_path_len) {
     
     /* In case of fail_point use, coast1 tile may be the other dock tile, not the one on the coast. */
     if(AIMarine.IsDockTile(coast1) && AITile.GetSlope(coast1) == AITile.SLOPE_FLAT) {
-        if(AIMarine.IsDockTile(coast1 + AIMap.GetTileIndex(1, 0)))
-            coast1 = coast1 + AIMap.GetTileIndex(1, 0);
-        else if(AIMarine.IsDockTile(coast1 + AIMap.GetTileIndex(0, 1)))
-            coast1 = coast1 + AIMap.GetTileIndex(0, 1);
-        else if(AIMarine.IsDockTile(coast1 + AIMap.GetTileIndex(-1, 0)))
-            coast1 = coast1 + AIMap.GetTileIndex(-1, 0);
-        else if(AIMarine.IsDockTile(coast1 + AIMap.GetTileIndex(0, -1)))
-            coast1 = coast1 + AIMap.GetTileIndex(0, -1);
+        if(AIMarine.IsDockTile(coast1 + NORTH))
+            coast1 = coast1 + NORTH;
+        else if(AIMarine.IsDockTile(coast1 + SOUTH))
+            coast1 = coast1 + SOUTH;
+        else if(AIMarine.IsDockTile(coast1 + WEST))
+            coast1 = coast1 + WEST;
+        else if(AIMarine.IsDockTile(coast1 + EAST))
+            coast1 = coast1 + EAST;
     }
     local start = -1;        
     local forward = 0;
@@ -119,25 +123,25 @@ function CoastPathfinder::FindPath(coast1, coast2, max_path_len) {
         /* West. */
         case AITile.SLOPE_E:
         case AITile.SLOPE_NE:
-            start = coast1 + AIMap.GetTileIndex(1, 0);
-            forward = 2;
+            start = coast1 + WEST;
+            forward = 1;
             break;
         /* South. */
         case AITile.SLOPE_N:
         case AITile.SLOPE_NW:
-            start = coast1 + AIMap.GetTileIndex(0, 1);
+            start = coast1 + SOUTH;
             forward = 2;
             break;
         /* North. */
         case AITile.SLOPE_S:
         case AITile.SLOPE_SE:
-            start = coast1 + AIMap.GetTileIndex(0, -1);
+            start = coast1 + NORTH;
             forward = 0;
             break;
         /* East. */
         case AITile.SLOPE_W:
         case AITile.SLOPE_SW:
-            start = coast1 + AIMap.GetTileIndex(-1, 0);
+            start = coast1 + EAST;
             forward = 3;
             break;
         case AITile.SLOPE_NWS:
@@ -158,6 +162,8 @@ function CoastPathfinder::FindPath(coast1, coast2, max_path_len) {
         AISign.BuildSign(coast1, "wrong dir: " + AITile.GetSlope(coast1));
         return false;
     }
+    
+    local initial_dist = AIMap.DistanceManhattan(start, coast2);
   
     /* First iteration we turn right, second left. */
     local turns = [
@@ -196,6 +202,11 @@ function CoastPathfinder::FindPath(coast1, coast2, max_path_len) {
         
             /* We reached second dock. */
             local dist = AIMap.DistanceManhattan(this.next, coast2);
+            
+            /* This means we would need to get back 100 tiles to reach the destination. */
+            if(dist > initial_dist + 100)
+                break;
+            
             if(dist != -1 && dist <= 2) { /* wtf, DistanceManhattan returns -1 sometimes */
                 succ[iter] = true;
                 //AILog.Info("succ:" + this.next + "," + coast2 + "," + AIMap.DistanceManhattan(this.next, coast2));

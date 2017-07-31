@@ -1,3 +1,4 @@
+require("../global.nut");
 require("../utils.nut")
 
 class CanalPathfinder {
@@ -64,10 +65,10 @@ function CanalPathfinder::_Neighbours(self, path, cur_node) {
     
     local tiles = [];
     local offsets = [
-        cur_node + AIMap.GetTileIndex(0, -1),
-        cur_node + AIMap.GetTileIndex(0, 1),
-        cur_node + AIMap.GetTileIndex(1, 0),
-        cur_node + AIMap.GetTileIndex(-1, 0)
+        cur_node + NORTH,
+        cur_node + SOUTH,
+        cur_node + WEST,
+        cur_node + EAST
     ];
     foreach(tile in offsets)
         if((AITile.GetSlope(tile) == AITile.SLOPE_FLAT) && 

@@ -1,3 +1,4 @@
+require("global.nut");
 require("utils.nut");
 
 class Dock {
@@ -13,14 +14,14 @@ class Dock {
         if(!_is_on_water) {
             /* We need to find the hill tile. */
             if(AIMarine.IsDockTile(dock) && AITile.GetSlope(dock) == AITile.SLOPE_FLAT) {
-                if(AIMarine.IsDockTile(dock + AIMap.GetTileIndex(0, 1)))
-                    this.tile = dock + AIMap.GetTileIndex(0, 1);
-                else if(AIMarine.IsDockTile(dock + AIMap.GetTileIndex(0, -1)))
-                    this.tile = dock + AIMap.GetTileIndex(0, -1);
-                else if(AIMarine.IsDockTile(dock + AIMap.GetTileIndex(1, 0)))
-                    this.tile = dock + AIMap.GetTileIndex(1, 0);
-                else if(AIMarine.IsDockTile(dock + AIMap.GetTileIndex(-1, 0)))
-                    this.tile = dock + AIMap.GetTileIndex(-1, 0);
+                if(AIMarine.IsDockTile(dock + NORTH))
+                    this.tile = dock + NORTH;
+                else if(AIMarine.IsDockTile(dock + SOUTH))
+                    this.tile = dock + SOUTH;
+                else if(AIMarine.IsDockTile(dock + WEST))
+                    this.tile = dock + WEST;
+                else if(AIMarine.IsDockTile(dock + EAST))
+                    this.tile = dock + EAST;
             }
             
             if(artificial_orientation != -1) {
@@ -212,23 +213,23 @@ function _val_IsWaterDepotCapable(tile, orientation) {
     switch(orientation) {
         /* West. */
         case 0:
-            back = tile + AIMap.GetTileIndex(-1, 0);
-            front = tile + AIMap.GetTileIndex(1, 0);
+            back = tile + EAST;
+            front = tile + WEST;
             break;
         /* South. */
         case 1:
-            back = tile + AIMap.GetTileIndex(0, -1);
-            front = tile + AIMap.GetTileIndex(0, 1);
+            back = tile + NORTH;
+            front = tile + SOUTH;
             break;
         /* North. */
         case 2:
-            back = tile + AIMap.GetTileIndex(0, 1);
-            front = tile + AIMap.GetTileIndex(0, -1);
+            back = tile + SOUTH;
+            front = tile + NORTH;
             break;
         /* East. */
         default:
-            back = tile + AIMap.GetTileIndex(1, 0);
-            front = tile + AIMap.GetTileIndex(-1, 0);
+            back = tile + WEST;
+            front = tile + EAST;
             break;
     }
     return AITile.IsWaterTile(back) && !AIBridge.IsBridgeTile(back) && AITile.IsWaterTile(front);
@@ -437,23 +438,23 @@ function Dock::_TryBuildWaterDepot(depot) {
         /* West. */
         case 0:
             /* BuildWaterDepot has some weird direction interpretation. */
-            if(AIMarine.BuildWaterDepot(depot + AIMap.GetTileIndex(-1, 0), depot + AIMap.GetTileIndex(1, 0)))
+            if(AIMarine.BuildWaterDepot(depot + EAST, depot + WEST))
                 return depot;
             return -1;
         /* South. */
         case 1:
             /* BuildWaterDepot has some weird direction interpretation. */
-            if(AIMarine.BuildWaterDepot(depot + AIMap.GetTileIndex(0, -1), depot + AIMap.GetTileIndex(0, 1)))
+            if(AIMarine.BuildWaterDepot(depot + NORTH, depot + SOUTH))
                 return depot;
             return -1;
         /* North. */
         case 2:
-            if(AIMarine.BuildWaterDepot(depot, depot + AIMap.GetTileIndex(0, -1)))
+            if(AIMarine.BuildWaterDepot(depot, depot + NORTH))
                 return depot;
             return -1;
         /* East. */
         default:
-            if(AIMarine.BuildWaterDepot(depot, depot + AIMap.GetTileIndex(-1, 0)))
+            if(AIMarine.BuildWaterDepot(depot, depot + EAST))
                 return depot;
             return -1;
     }
