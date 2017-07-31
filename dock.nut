@@ -177,7 +177,8 @@ function _val_IsDockCapable(tile) {
     if(AITile.GetSlope(front1) != AITile.SLOPE_FLAT || AITile.GetSlope(front2) != AITile.SLOPE_FLAT)
         return false;
     
-    return AITile.IsWaterTile(front1) && !AIBridge.IsBridgeTile(front1) && AITile.IsWaterTile(front2);
+    return AITile.IsWaterTile(front1) && !AIBridge.IsBridgeTile(front1) &&
+        AITile.IsWaterTile(front2) && !AIMarine.IsWaterDepotTile(front2);
 }
 
 function _val_IsLockCapable(tile) {
@@ -300,7 +301,8 @@ function Dock::EstimateCost() {
 
 function Dock::Build() {
     /* Already there. */
-    if(this.is_on_water || AIMarine.IsDockTile(this.tile))
+    if(this.is_on_water ||
+        (AIMarine.IsDockTile(this.tile)  && (AITile.GetOwner(this.tile) == AICompany.ResolveCompanyID(AICompany.COMPANY_SELF))))
         return this.tile;
         
     /* Artificial dock. */
@@ -410,7 +412,9 @@ function Dock::FindWaterDepot() {
     if(this.is_artificial && best == -1)
         return -1;
     
-    if(best != -1 && AIMarine.IsWaterDepotTile(best))
+    if(best != -1 &&
+        AIMarine.IsWaterDepotTile(best) && 
+        (AITile.GetOwner(best) == AICompany.ResolveCompanyID(AICompany.COMPANY_SELF)))
         return best;
 
     /* Let's look nearby. */
@@ -425,7 +429,8 @@ function Dock::FindWaterDepot() {
 }
 
 function Dock::_TryBuildWaterDepot(depot) {
-    if(AIMarine.IsWaterDepotTile(depot))
+    if(AIMarine.IsWaterDepotTile(depot) &&
+        (AITile.GetOwner(depot) == AICompany.ResolveCompanyID(AICompany.COMPANY_SELF)))
         return depot;
     
     switch(this.orientation) {

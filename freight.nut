@@ -41,6 +41,8 @@ function Freight::BuildTownFreightRoutes() {
     cargos.KeepValue(1); /* Only freight cargo. */
     cargos.Valuate(AICargo.GetTownEffect);
     cargos.RemoveValue(AICargo.TE_NONE); /* Only cargos that are accepted by towns. */
+    cargos.Valuate(AICargo.GetCargoIncome, 150, 100);
+    cargos.Sort(AIList.SORT_BY_VALUE, AIList.SORT_DESCENDING); /* Sort by payment rates. */
     
     for(local cargo = cargos.Begin(); cargos.HasNext(); cargo = cargos.Next()) {
                 
@@ -75,7 +77,7 @@ function Freight::BuildTownFreightRoutes() {
             if(producer.GetMonthlyProduction(cargo) <= 0)
                 continue;
             
-            local dock1 = producer.GetDock();
+            local dock1 = producer.GetExistingDock();
 
             /* No dock, but there is a suitable coast nearby. */
             if(dock1 == null) {
@@ -159,6 +161,8 @@ function Freight::BuildIndustryFreightRoutes() {
     cargos.KeepValue(1); /* Only freight cargo. */
     cargos.Valuate(AICargo.GetTownEffect);
     cargos.KeepValue(AICargo.TE_NONE); /* Only cargos that are accepted by other industries. */
+    cargos.Valuate(AICargo.GetCargoIncome, 150, 100);
+    cargos.Sort(AIList.SORT_BY_VALUE, AIList.SORT_DESCENDING); /* Sort by payment rates. */
     
     for(local cargo = cargos.Begin(); cargos.HasNext(); cargo = cargos.Next()) {
         
@@ -186,7 +190,7 @@ function Freight::BuildIndustryFreightRoutes() {
             if(producer.GetMonthlyProduction(cargo) <= 0)
                 continue;
             
-            local dock1 = producer.GetDock();
+            local dock1 = producer.GetExistingDock();
             
             /* No dock, but there is a suitable coast nearby. */
             if(dock1 == null) {
@@ -245,7 +249,7 @@ function Freight::BuildIndustryFreightRoutes() {
                     }
                 }
                 
-                local dock2 = acceptor.GetDock();
+                local dock2 = acceptor.GetExistingDock();
                 
                 /* No dock, but there is a suitable coast nearby. */
                 if(dock2 == null) {

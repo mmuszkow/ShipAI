@@ -316,8 +316,10 @@ function Water::BuildShip(depot, cargo, round_trip_distance, monthly_production)
     }
         
     local vehicle = AIVehicle.BuildVehicle(depot, engine);
-    if(vehicle == -1) {
-        AILog.Error("Failed to build the ship in depot #" + depot + ": " + AIError.GetLastErrorString());
+    local last_err = AIError.GetLastErrorString();
+    if(!AIVehicle.IsValidVehicle(vehicle)) {
+        AILog.Error("Failed to build the ship in depot #" + depot + ": " + last_err);
+        AISign.BuildSign(depot, "ship failed")
         return -1;
     }
     
@@ -377,7 +379,7 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
         return false;
     }
     local vehicle = BuildShip(depot, cargo, path.Length() * 2, monthly_production);
-    if(vehicle == -1) {
+    if(!AIVehicle.IsValidVehicle(vehicle)) {
         AILog.Error("Failed to build ship for " + dock1.GetName() + "-" + dock2.GetName() + " route");
         return false;
     }
@@ -391,8 +393,6 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
     
     if(!AIOrder.AppendOrder(vehicle, dock1.tile, load_order)) {
         AILog.Error("Failed to schedule the ship for " + dock1.GetName() + "-" + dock2.GetName() + " route (1): " + AIError.GetLastErrorString());
-        AISign.BuildSign(dock1.tile, "append (1)");
-        AISign.BuildSign(dock2.tile, "append (1)");
         AIVehicle.SellVehicle(vehicle);
         return false;
     }
@@ -401,17 +401,12 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
     foreach(buoy in buoys)
         if(!AIOrder.AppendOrder(vehicle, buoy, AIOrder.OF_NONE)) {
             AILog.Error("Failed to schedule the ship for " + dock1.GetName() + "-" + dock2.GetName() + " route (2): " + AIError.GetLastErrorString());
-            AISign.BuildSign(dock1.tile, "append (2)");
-            AISign.BuildSign(dock2.tile, "append (2)");
-            AISign.BuildSign(buoy, "buoy err");
             AIVehicle.SellVehicle(vehicle);
             return false;
         }
         
     if(!AIOrder.AppendOrder(vehicle, dock2.tile, AIOrder.OF_NONE)) {
         AILog.Error("Failed to schedule the ship for " + dock1.GetName() + "-" + dock2.GetName() + " route (3): " + AIError.GetLastErrorString());
-        AISign.BuildSign(dock1.tile, "append (3)");
-        AISign.BuildSign(dock2.tile, "append (3)");
         AIVehicle.SellVehicle(vehicle);
         return false;
     }
@@ -420,7 +415,7 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
     buoys.reverse();
     foreach(buoy in buoys)
         if(!AIOrder.AppendOrder(vehicle, buoy, AIOrder.OF_NONE)) {
-            AILog.Error("Failed to schedule the ship for " + dock1.GetName() + "-" + dock2.GetName() + " route: " + AIError.GetLastErrorString());
+            AILog.Error("Failed to schedule the ship for " + dock1.GetName() + "-" + dock2.GetName() + " route (4): " + AIError.GetLastErrorString());
             AIVehicle.SellVehicle(vehicle);
             return false;
         }

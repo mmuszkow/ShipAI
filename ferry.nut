@@ -12,12 +12,22 @@ class Ferry extends Water {
     
     constructor() {
         Water.constructor();
-        this._passenger_cargo_id = GetPassengersCargo();
+        this._passenger_cargo_id = _GetPassengersCargoId();
     }
 }
    
 function Ferry::AreFerriesAllowed() {
     return AreShipsAllowed() && ship_model.ExistsForCargo(this._passenger_cargo_id);
+}
+
+/* Gets passengers cargo ID. */
+function Ferry::_GetPassengersCargoId() {
+    local cargo_list = AICargoList();
+    cargo_list.Valuate(AICargo.HasCargoClass, AICargo.CC_PASSENGERS);
+    cargo_list.KeepValue(1);
+    cargo_list.Valuate(AICargo.GetTownEffect);
+    cargo_list.KeepValue(AICargo.TE_PASSENGERS);
+    return cargo_list.Begin();
 }
 
 function Ferry::GetTownsThatCanHavePassengerDock() {

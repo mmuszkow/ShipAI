@@ -9,16 +9,6 @@ function SafeAddRectangle(list, tile, range) {
     list.AddRectangle(AIMap.GetTileIndex(x1, y1), AIMap.GetTileIndex(x2, y2)); 
 }
 
-/* Gets passengers cargo ID. */
-function GetPassengersCargo() {
-    local cargo_list = AICargoList();
-    cargo_list.Valuate(AICargo.HasCargoClass, AICargo.CC_PASSENGERS);
-    cargo_list.KeepValue(1);
-    cargo_list.Valuate(AICargo.GetTownEffect);
-    cargo_list.KeepValue(AICargo.TE_PASSENGERS);
-    return cargo_list.Begin();
-}
-
 /* For determining if we can build dock on such slope. */
 function IsSimpleSlope(tile) {
     local slope = AITile.GetSlope(tile);

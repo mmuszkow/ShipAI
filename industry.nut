@@ -168,7 +168,7 @@ function _val_IndustryCanHaveDock(industry, is_producer) {
     return Industry(industry, is_producer).CanHaveDock();
 }
 
-function Industry::GetDock() {
+function Industry::GetExistingDock() {
     if(AIIndustry.HasDock(this.id))
         return Dock(AIIndustry.GetDockLocation(this.id), -1, true);
     
@@ -182,6 +182,8 @@ function Industry::GetDock() {
     tiles.KeepValue(1);
     tiles.Valuate(AITile.GetOwner);
     tiles.KeepValue(AICompany.ResolveCompanyID(AICompany.COMPANY_SELF));
+    tiles.Valuate(IsSimpleSlope);
+    tiles.KeepValue(1);
     if(tiles.IsEmpty())
         return null;
     
