@@ -41,12 +41,13 @@ function _val_VehicleModelHasProperCapacity(model, cargo, capacity_cache, distan
     local travel_time_days = 27 * distance / AIEngine.GetMaxSpeed(model); // X km/h => X/27 tiles/day
     local capacity = _val_GetVehicleModelCapacity(model, cargo, capacity_cache);
     //AILog.Info("Production: " + (travel_time_days * daily_production) + " travel time: " + travel_time_days);
+    //AILog.Info(AIEngine.GetName(model) + " " + (travel_time_days * daily_production));
     return capacity <= 300 && capacity <= travel_time_days * daily_production;
 }
 
 /* For finding the best vehicle model. */
 function _val_ShipModelRating(model, cargo, capacity_cache) {
-    return (_val_GetVehicleModelCapacity(model, cargo, capacity_cache) * AIEngine.GetMaxSpeed(model) * AIEngine.GetReliability(model) / 100.0).tointeger()
+    return (_val_GetVehicleModelCapacity(model, cargo, capacity_cache) * AIEngine.GetMaxSpeed(model) * AIEngine.GetReliability(model) / 100.0).tointeger();
 }
 
 function ShipModel::GetBestModelForCargo(cargo, round_trip_distance, monthly_production) {

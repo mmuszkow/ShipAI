@@ -40,19 +40,16 @@ function Ferry::GetTownsThatCanHavePassengerDock() {
 }
 
 /* Estimate passengers production per month. This is veeery rough. */
-function Ferry::EstimatePassengersPerMonth(dock) {
-    local station_id = AIStation.GetStationID(dock.tile);
-    /* TODO */
-    
-    // it always return 0 ...
-    //local cargo_per_month = AIStation.GetCargoPlanned(station_id, this._passenger_cargo_id);
-    local cargo_per_month = AITile.GetCargoAcceptance(dock.tile, this._passenger_cargo_id, 1, 1, AIStation.GetCoverageRadius(AIStation.STATION_DOCK));
+function Ferry::EstimatePassengersPerMonth(town) {
+    // always returns 0 ...
+    //local cargo_per_month = AITile.GetCargoProduction(dock.tile, this._passenger_cargo_id, 1, 1, AIStation.GetCoverageRadius(AIStation.STATION_DOCK));
+    local cargo_per_month = AITile.GetCargoProduction(dock.tile, this._passenger_cargo_id, 1, 1, AIStation.GetCoverageRadius(AIStation.STATION_DOCK));
     
     /* Some % of cargo is already transported. */
-    if(AIStation.HasCargoRating(station_id, this._passenger_cargo_id))
-        return (((100 - AIStation.GetCargoRating(station_id, this._passenger_cargo_id)) / 100.0) * cargo_per_month).tointeger()
+    local station_id = AIStation.GetStationID(dock.tile);
+    if(AIStation.IsValidStation(station_id) && AIStation.HasCargoRating(station_id, this._passenger_cargo_id))
+        return (((100 - AIStation.GetCargoRating(station_id, this._passenger_cargo_id)) / 100.0) * cargo_per_month).tointeger();
     
-    /* Virgin station. */
     return cargo_per_month;
 }
 
@@ -76,12 +73,16 @@ function Ferry::BuildFerryRoutes() {
         local town = Town(town_id);
         local dock1 = town.GetExistingDock(this._passenger_cargo_id);
         
+        /* Monthly production is used to determine the potential ship size. */
+        if(town.GetMonthlyProduction(this._passenger_cargo_id) <= min_capacity)
+            continue;
+        
         /* If there is already a dock in the city and there 
            are not many passengers waiting there, there is no point
            in opening a new route. */
         if(dock1 != null && AIStation.GetCargoWaiting(AIStation.GetStationID(dock1.tile), this._passenger_cargo_id) < 2 * min_capacity)
             continue;
-        
+
         /* Find a city suitable for connection closest to ours. */
         local towns2 = AIList();
         towns2.AddList(towns);
@@ -121,8 +122,7 @@ function Ferry::BuildFerryRoutes() {
             }
             
             /* Buy and schedule ship. */
-            local monthly_production = max(EstimatePassengersPerMonth(dock1), EstimatePassengersPerMonth(dock2));
-            if(BuildAndStartShip(dock1, dock2, this._passenger_cargo_id, false, monthly_production)) {
+            if(BuildAndStartShip(dock1, dock2, this._passenger_cargo_id, false, town.GetMonthlyProduction(this._passenger_cargo_id))) {
                 AILog.Info("Building ferry between " + town.GetName() + " and " + town2.GetName());
                 ferries_built++;
             } else if(!AreFerriesAllowed())

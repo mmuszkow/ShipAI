@@ -55,3 +55,7 @@ function Town::GetExistingDock(cargo) {
     }
     return null;
 }
+
+function Town::GetMonthlyProduction(cargo) {
+    return (((100 - AITown.GetLastMonthTransportedPercentage(this.id, cargo))/100.0) * AITown.GetLastMonthProduction(this.id, cargo)).tointeger();
+}
