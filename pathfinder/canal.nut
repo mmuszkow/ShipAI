@@ -1,11 +1,14 @@
-require("../global.nut");
-require("../utils.nut")
-
 class CanalPathfinder {
     _aystar_class = null;
     _aystar = null;
     _dest = -1;
     _max_length = 100;
+    
+    /* when using bananas, we cannot use '..' in require, so we cannot include global.nut */
+    NORTH = AIMap.GetTileIndex(0, -1);
+    SOUTH = AIMap.GetTileIndex(0, 1);
+    WEST = AIMap.GetTileIndex(1, 0);
+    EAST = AIMap.GetTileIndex(-1, 0);
     
     constructor() {
         _aystar_class = import("graph.aystar", "", 6);
@@ -38,7 +41,7 @@ function CanalPathfinder::FindPath(start, end, max_distance, ignored = []) {
 }
 
 function _IsRiverTile(tile) {
-    /* slope is flat */
+    /* assuming slope is flat */
     return AITile.IsWaterTile(tile) && (AITile.GetMaxHeight(tile) > 0);
 }
 

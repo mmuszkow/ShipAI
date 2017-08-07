@@ -6,6 +6,12 @@ class CoastPathfinder {
     next = -1;
     direction = 0;
     path = [];
+    
+    /* when using bananas, we cannot use '..' in require, so we cannot include global.nut */
+    NORTH = AIMap.GetTileIndex(0, -1);
+    SOUTH = AIMap.GetTileIndex(0, 1);
+    WEST = AIMap.GetTileIndex(1, 0);
+    EAST = AIMap.GetTileIndex(-1, 0);
         
     constructor() {}
 }
