@@ -1,5 +1,3 @@
-require("../global.nut");
-
 /* Greedy path search, much faster than A* */
 class CoastPathfinder {   
     tile = -1;
