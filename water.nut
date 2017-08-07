@@ -12,7 +12,7 @@ require("pathfinder/line.nut");
 /* Water utils. */
 class Water {
     /* Min Manhattan distance between 2 points to open a new connection. */
-    min_distance = 30;
+    min_distance = 20;
     /* Max Manhattan distance between 2 points to open a new connection. */
     max_distance = 300;
     /* Max path length. */
@@ -59,7 +59,7 @@ function Water::AreShipsAllowed() {
 }
 
 function Water::WaitToHaveEnoughMoney(cost) {
-    while(cost > AICompany.GetBankBalance(AICompany.COMPANY_SELF) - this.min_balance) {}
+    while(cost + this.min_balance > AICompany.GetBankBalance(AICompany.COMPANY_SELF)) {}
 }
 
 /* Finds a path between 2 points on sea/lakes. */
@@ -148,9 +148,6 @@ function Water::FindWaterPath(dock1, dock2, max_len) {
     /* One of the docks is artificial, so we won't be able to reach it. */
     if(!areCanalsAllowed)
         return ShipPath(dock1, dock2);
-    
-    //AISign.BuildSign(dock1.tile, "artificial:"+dock1.is_artificial);
-    //AISign.BuildSign(dock2.tile, "artificial:"+dock2.is_artificial);
     
     /* Don't use tiles occupied by docks and locks. */ 
     local coast_cross = dock1.GetNecessaryCoastCrossesTo(dock2);       
@@ -319,7 +316,6 @@ function Water::BuildShip(depot, cargo, round_trip_distance, monthly_production)
     local last_err = AIError.GetLastErrorString();
     if(!AIVehicle.IsValidVehicle(vehicle)) {
         AILog.Error("Failed to build the ship in depot #" + depot + ": " + last_err);
-        AISign.BuildSign(depot, "ship failed")
         return -1;
     }
     
@@ -355,7 +351,6 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
     WaitToHaveEnoughMoney(dock1.EstimateCost());
     if(dock1.Build() == -1) {
         AILog.Error("Failed to build dock: " + AIError.GetLastErrorString());
-        AISign.BuildSign(dock1.tile, "dock fail");
         return false;
     }
     local depot = dock1.FindWaterDepot();
@@ -370,7 +365,6 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
     WaitToHaveEnoughMoney(dock2.EstimateCost());
     if(dock2.Build() == -1) {
         AILog.Error("Failed to build dock: " + AIError.GetLastErrorString());
-        AISign.BuildSign(dock2.tile, "dock fail");
         return false;
     }
     WaitToHaveEnoughMoney(path.EstimateCanalsCost());

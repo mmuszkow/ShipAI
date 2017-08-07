@@ -18,6 +18,7 @@ function CanalPathfinder::FindPath(start, end, max_distance, ignored = []) {
         return [];
     
     local dist = AIMap.DistanceManhattan(start, end);
+    max_distance = min(max_distance, 50); /* TODO: improve performance instead */
     if(dist == -1 || dist > max_distance)
         return [];
 

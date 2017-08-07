@@ -29,42 +29,22 @@ function ShipPath::BuildCanals() {
     foreach(tile in this.canal1) {
         if(!AITile.IsWaterTile(tile) && !AIMarine.IsCanalTile(tile) && !AIMarine.IsBuoyTile(tile)  && !AIMarine.IsLockTile(tile)) {
             if(IsSimpleSlope(tile)) {
-                if(!AIMarine.BuildLock(tile)) {
-                    /*foreach(tile_err in this.canal1)
-                        if(tile_err != tile)
-                            AISign.BuildSign(tile_err, "x");*/
-                    AISign.BuildSign(tile, "lock failed");
+                if(!AIMarine.BuildLock(tile))
                     return false;
-                }
             } else {
-                if(!AIMarine.BuildCanal(tile)) {
-                    foreach(tile_err in this.canal1)
-                        if(tile_err != tile)
-                            AISign.BuildSign(tile_err, "x");
-                    AISign.BuildSign(tile, "canal failed");
+                if(!AIMarine.BuildCanal(tile))
                     return false;
-                }
             }
         }
     }
     foreach(tile in this.canal2) {
         if(!AITile.IsWaterTile(tile) && !AIMarine.IsCanalTile(tile) && !AIMarine.IsBuoyTile(tile) && !AIMarine.IsLockTile(tile)) {
             if(IsSimpleSlope(tile)){
-                if(!AIMarine.BuildLock(tile)) {
-                    /*foreach(tile_err in this.canal2)
-                        if(tile_err != tile)
-                            AISign.BuildSign(tile_err, "x");*/
-                    AISign.BuildSign(tile, "lock failed");
+                if(!AIMarine.BuildLock(tile))
                     return false;
-                }
             } else{
-                if(!AIMarine.BuildCanal(tile)) {
-                    foreach(tile_err in this.canal2)
-                        if(tile_err != tile)
-                            AISign.BuildSign(tile_err, "x");
-                    AISign.BuildSign(tile, "canal failed");
+                if(!AIMarine.BuildCanal(tile))
                     return false;
-                }
             }
         }
     }

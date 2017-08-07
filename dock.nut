@@ -80,7 +80,6 @@ function Dock::GetPfTile(dest = -1) {
         if(water.IsEmpty())
             return -1; /* Something's wrong... */
         
-        //AISign.BuildSign(water.Begin(), "x");
         return water.Begin();
     }
     
@@ -286,18 +285,16 @@ function Dock::GetLockNearby() {
 function Dock::EstimateCost() {
     if(this.is_on_water || AIMarine.IsDockTile(this.tile))
         return 0;
-    if(!this.is_artificial)
-        return AIMarine.GetBuildCost(AIMarine.BT_DOCK);
     
-    /* TODO */
-    //return  AIMarine.GetBuildCost(AIMarine.BT_DOCK) + 
-    //        2 * AITile.GetBuildCost(BT_TERRAFORM) + /* raise */
-    //        12 * AITile.GetBuildCost(BT_CLEAR_FIELDS) + /* worst case */
-    //        6000;
-    local test = AITestMode();
-    local costs = AIAccounting();
-    this.Build();
-    return costs.GetCosts();
+    if(!this.is_artificial)
+        return  AIMarine.GetBuildCost(AIMarine.BT_DOCK) + 
+                AITile.GetBuildCost(AITile.BT_CLEAR_FIELDS); /* building on the coast is more expensive + we may need to clear it */
+    
+    /* AITestMode + AIAccounting doesn't seem to work properly */
+    return  AIMarine.GetBuildCost(AIMarine.BT_DOCK) + 
+            2 * AITile.GetBuildCost(AITile.BT_TERRAFORM) + /* raise */
+            12 * AITile.GetBuildCost(AITile.BT_CLEAR_FIELDS) + /* worst case */
+            48000; /* canals, how to get the canal cost?? */
 }
 
 function Dock::Build() {

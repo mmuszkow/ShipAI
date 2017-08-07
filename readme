@@ -3,6 +3,8 @@
 OpenTTD AI that operates only ships, it's heavily based on HeliFerry AI.
 
 AI supports:
+- freight & PAX cargos
+- building canals
 - autoreplacing vehicle model when the new, better model appears
 - selling unprofitable vehicles
 - autoreplacing old vehicles with new ones

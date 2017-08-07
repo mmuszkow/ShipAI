@@ -39,20 +39,6 @@ function Ferry::GetTownsThatCanHavePassengerDock() {
     return towns;
 }
 
-/* Estimate passengers production per month. This is veeery rough. */
-function Ferry::EstimatePassengersPerMonth(town) {
-    // always returns 0 ...
-    //local cargo_per_month = AITile.GetCargoProduction(dock.tile, this._passenger_cargo_id, 1, 1, AIStation.GetCoverageRadius(AIStation.STATION_DOCK));
-    local cargo_per_month = AITile.GetCargoProduction(dock.tile, this._passenger_cargo_id, 1, 1, AIStation.GetCoverageRadius(AIStation.STATION_DOCK));
-    
-    /* Some % of cargo is already transported. */
-    local station_id = AIStation.GetStationID(dock.tile);
-    if(AIStation.IsValidStation(station_id) && AIStation.HasCargoRating(station_id, this._passenger_cargo_id))
-        return (((100 - AIStation.GetCargoRating(station_id, this._passenger_cargo_id)) / 100.0) * cargo_per_month).tointeger();
-    
-    return cargo_per_month;
-}
-
 function Ferry::BuildFerryRoutes() {
     local ferries_built = 0;
     if(!this.AreFerriesAllowed())

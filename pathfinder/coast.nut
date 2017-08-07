@@ -158,10 +158,8 @@ function CoastPathfinder::FindPath(coast1, coast2, max_path_len) {
             break;
     }
     
-    if(start == -1) {
-        AISign.BuildSign(coast1, "wrong dir: " + AITile.GetSlope(coast1));
+    if(start == -1)
         return false;
-    }
     
     local initial_dist = AIMap.DistanceManhattan(start, coast2);
   
@@ -220,7 +218,6 @@ function CoastPathfinder::FindPath(coast1, coast2, max_path_len) {
             len[iter]++;
             this.tile = this.next;
             _path[iter].push(this.tile);
-            //AISign.BuildSign(this.tile, "" + iter);
         
             /* Max distance exceeded or better result achieved already. */
             if(len[iter] > max_path_len || (iter == 1 && succ[0] && len[1] > len[0]))

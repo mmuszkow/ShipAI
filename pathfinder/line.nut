@@ -33,7 +33,6 @@ function StraightLinePathfinder::FindPath(start, end, max_path_len) {
     local len = 0;
     while(true) {
         local tile = AIMap.GetTileIndex(x0, y0);
-        //AISign.BuildSign(tile, "x");
         path.push(tile);
         if(tile == end)
             return true;

@@ -214,7 +214,7 @@ function Freight::BuildIndustryFreightRoutes() {
                 }
             }
 
-            /* Find the closest acceptor. */
+            /* Find the closest acceptors. */
             local close_acceptors = AIList()
             close_acceptors.AddList(acceptors); /* No clone method... */
             close_acceptors.Valuate(AIIndustry.GetDistanceManhattanToTile, AIIndustry.GetLocation(producer.id));
