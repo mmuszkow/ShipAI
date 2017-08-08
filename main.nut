@@ -21,6 +21,7 @@ function ShipAI::Start() {
     }
     while(!freight.AreShipsAllowed()) { this.Sleep(1000); }
     
+    /* Get max loan. */
     AICompany.SetLoanAmount(AICompany.GetMaxLoanAmount());
     
     while(true) {          
@@ -30,18 +31,18 @@ function ShipAI::Start() {
         
         /* Build town-town connections. */
         local new_ferries = ferry.BuildFerryRoutes();
+
+        /* Return the loan if we have the money. */
+        AICompany.SetLoanAmount(0);
         
-        /* Build statues when nothing better to do, they increase the stations ratings. */
-        local statues_founded = 0;
-        if(new_freights == 0 && new_ferries == 0)
-            statues_founded = BuildStatues();
+        /* Build statues if we have a lot of money left, they increase the stations ratings. */
+        local statues_founded = BuildStatuesIfRich();
         
         /* Print summary/ */
-        if(new_freights > 1) AILog.Info("New freight routes: " + new_freights);
-        if(new_ferries > 1) AILog.Info("New ferry routes: " + new_ferries);
-        if(statues_founded > 1) AILog.Info("Statues founded: " + statues_founded);
+        if(new_freights > 0) AILog.Info("New freight routes: " + new_freights);
+        if(new_ferries > 0) AILog.Info("New ferry routes: " + new_ferries);
+        if(statues_founded > 0) AILog.Info("Statues founded: " + statues_founded);
         
-        AICompany.SetLoanAmount(0);        
         this.Sleep(50);
     }
 }
@@ -61,8 +62,8 @@ function ShipAI::SetCompanyName() {
         AICompany.SetPresidentName("Mrs. Rivkah Blumfeld");
 }
 
-/* Build statues in the cities we have any stations. */
-function ShipAI::BuildStatues() {
+/* Build statues in the cities we have any station. */
+function ShipAI::BuildStatuesIfRich() {
     local founded = 0;
     
     if(AICompany.GetBankBalance(AICompany.COMPANY_SELF) < 10 * AICompany.GetMaxLoanAmount())
