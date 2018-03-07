@@ -34,9 +34,7 @@ function Ferry::GetTownsThatCanHavePassengerDock() {
     local towns = AITownList();
     towns.Valuate(AITown.GetPopulation);
     towns.KeepAboveValue(this.min_population);
-    towns.Valuate(_val_TownCanHaveDock, this.max_city_dock_distance, this._passenger_cargo_id);
-    towns.RemoveValue(0);
-    return towns;
+    return GetTownsThatCanHaveDock(this._passenger_cargo_id, towns); 
 }
 
 function Ferry::BuildFerryRoutes() {

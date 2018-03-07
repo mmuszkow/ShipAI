@@ -11,22 +11,28 @@ class Freight extends Water {
     }
 }
 
-function Freight::GetProducersThatCanHaveDock(cargo) {
+function Freight::GetIndustriesThatCanHaveDock(industries) {
+    /* To avoid exceeding CPU limit in Valuator, we split the list in parts */
+    local merged = AIList();
+    for(local i=0; i<industries.Count(); i+=50) {
+        local splitted = AIList();
+        splitted.AddList(industries);
+        splitted.RemoveTop(i);
+        splitted.KeepTop(50);
+        splitted.Valuate(_val_IndustryCanHaveDock, true);
+        splitted.RemoveValue(0);
+        merged.AddList(splitted);
+    }
+    return merged;
+}
+
+function Freight::GetCargoProducersThatCanHaveDock(cargo) {
     local producers = AIIndustryList_CargoProducing(cargo);
     producers.Valuate(AIIndustry.GetLastMonthProduction, cargo);
     producers.KeepAboveValue(0); /* production more than 0. */
     producers.Valuate(AIIndustry.GetLastMonthTransportedPercentage, cargo);
     producers.KeepBelowValue(this.percent_to_open_new_route); /* Less than 60% of cargo transported. */
-    producers.Valuate(_val_IndustryCanHaveDock, true);
-    producers.RemoveValue(0);
-    return producers;
-}
-
-function Freight::GetTownsThatCanHaveDock(cargo) {
-    local towns = AITownList();
-    towns.Valuate(_val_TownCanHaveDock, this.max_city_dock_distance, cargo);
-    towns.RemoveValue(0);
-    return towns;
+    return GetIndustriesThatCanHaveDock(producers);
 }
 
 function Freight::BuildTownFreightRoutes() {
@@ -51,7 +57,7 @@ function Freight::BuildTownFreightRoutes() {
         if(min_capacity == -1)
             continue;
         
-        local producers = GetProducersThatCanHaveDock(cargo);
+        local producers = GetCargoProducersThatCanHaveDock(cargo);
         local acceptors = GetTownsThatCanHaveDock(cargo);
         
         for(local producer_id = producers.Begin(); producers.HasNext(); producer_id = producers.Next()) {
@@ -171,10 +177,8 @@ function Freight::BuildIndustryFreightRoutes() {
         if(min_capacity == -1)
             continue;
         
-        local producers = GetProducersThatCanHaveDock(cargo);
-        local acceptors = AIIndustryList_CargoAccepting(cargo);
-        acceptors.Valuate(_val_IndustryCanHaveDock, false);
-        acceptors.RemoveValue(0);
+        local producers = GetCargoProducersThatCanHaveDock(cargo);
+        local acceptors = GetIndustriesThatCanHaveDock(AIIndustryList_CargoAccepting(cargo));
         
         for(local producer_id = producers.Begin(); producers.HasNext(); producer_id = producers.Next()) {
             

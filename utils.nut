@@ -55,3 +55,4 @@ function GetHillBackTile(hill, dist) {
             return -1;
     }
 }
+

@@ -62,6 +62,21 @@ function Water::WaitToHaveEnoughMoney(cost) {
     while(cost + this.min_balance > AICompany.GetBankBalance(AICompany.COMPANY_SELF)) {}
 }
 
+function Water::GetTownsThatCanHaveDock(cargo, towns = AITownList()) {
+    /* To avoid exceeding CPU limit in Valuator, we split the list in parts */
+    local merged = AIList();
+    for(local i=0; i<towns.Count(); i+=50) {
+        local splitted = AIList();
+        splitted.AddList(towns);
+        splitted.RemoveTop(i);
+        splitted.KeepTop(50);
+        splitted.Valuate(_val_TownCanHaveDock, this.max_city_dock_distance, cargo);
+        splitted.RemoveValue(0);
+        merged.AddList(splitted);
+    }
+    return merged;
+}
+
 /* Finds a path between 2 points on sea/lakes. */
 function Water::FindOpenWaterPath(start, end, max_len) {
     if( this._not_connected_cache.HasItem(start << 32 | end) ||
