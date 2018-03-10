@@ -88,20 +88,21 @@ function CanalPathfinder::_CheckDirection(self, tile, existing_direction, new_di
 }
 
 function CanalPathfinder::_GetDominantDirection(from, to) {
-	local xDistance = AIMap.GetTileX(from) - AIMap.GetTileX(to);
-	local yDistance = AIMap.GetTileY(from) - AIMap.GetTileY(to);
-	if (abs(xDistance) >= abs(yDistance)) {
-		if (xDistance < 0) return 2;					// Left
-		if (xDistance > 0) return 1;					// Right
-	} else {
-		if (yDistance < 0) return 8;					// Down
-		if (yDistance > 0) return 4;					// Up
-	}
+    local xDistance = AIMap.GetTileX(from) - AIMap.GetTileX(to);
+    local yDistance = AIMap.GetTileY(from) - AIMap.GetTileY(to);
+    if (abs(xDistance) >= abs(yDistance)) {
+        if (xDistance < 0) return 2;                    // Left
+        if (xDistance > 0) return 1;                    // Right
+    } else {
+        if (yDistance < 0) return 8;                    // Down
+        if (yDistance > 0) return 4;                    // Up
+    }
 }
 
 function CanalPathfinder::_GetDirection(from, to) {
-	if (from - to >= AIMap.GetMapSizeX()) return 4;		// Up
-	if (from - to > 0) return 1;						// Right
-	if (from - to <= -AIMap.GetMapSizeX()) return 8;	// Down
-	if (from - to < 0) return 2;						// Left
+    if (from - to >= AIMap.GetMapSizeX()) return 4;     // Up
+    if (from - to > 0) return 1;                        // Right
+    if (from - to <= -AIMap.GetMapSizeX()) return 8;    // Down
+    if (from - to < 0) return 2;                        // Left
 }
+
