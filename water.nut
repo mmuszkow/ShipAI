@@ -108,6 +108,26 @@ function Water::BuildShip(depot, cargo, round_trip_distance, monthly_production)
     return vehicle;
 }
 
+function Water::FindVehicleServingRoute(dock1, dock2, depot, cargo) {
+    local station1 = AIStation.GetStationID(dock1.tile);
+    if(station1 == -1)
+        return -1;
+
+    local station2 = AIStation.GetStationID(dock2.tile);
+    if(station2 == -1)
+        return -1;
+
+    local vehicles = AIVehicleList_Station(station1);
+    vehicles.KeepList(AIVehicleList_Station(station2));
+    vehicles.KeepList(AIVehicleList_Depot(depot));
+    vehicles.Valuate(AIVehicle.GetCapacity, cargo);
+    vehicles.KeepAboveValue(0);
+    if(vehicles.IsEmpty())
+        return -1;
+    
+    return vehicles.Begin();
+}
+
 function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_production) {
     if(monthly_production <= 0 || !ship_model.ExistsForCargo(cargo))
         return false;
@@ -151,7 +171,25 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
         AILog.Error("Failed to build ship for " + dock1.GetName() + "-" + dock2.GetName() + " route");
         return false;
     }
-    
+
+    /* Share orders if possible */
+    local shared_orders_vehicle = FindVehicleServingRoute(dock1, dock2, depot, cargo);
+    if(shared_orders_vehicle != -1) {
+        if(!AIOrder.ShareOrders(vehicle, shared_orders_vehicle)) {
+            AILog.Error("Failed to share orders for the ship: " + AIError.GetLastErrorString());
+            AIVehicle.SellVehicle(vehicle);
+            return false;
+        }        
+ 
+        if(!AIVehicle.StartStopVehicle(vehicle)) {
+            AILog.Error("Failed to start the ship: " + AIError.GetLastErrorString());
+            AIVehicle.SellVehicle(vehicle);
+            return false;
+        }
+
+        return true;
+    }
+
     /* Build buoys every n tiles. */
     WaitToHaveEnoughMoney(pf.EstimateBuoysCost());
     local buoys = pf.BuildBuoys();
