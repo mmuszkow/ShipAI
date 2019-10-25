@@ -5,13 +5,13 @@ class Dock {
     tile = -1;
     orientation = -1;
     is_landdock = false;
-    is_on_water = false;
+    is_offshore = false;
     
-    constructor(dock, artificial_orientation = -1, _is_on_water = false) {
+    constructor(dock, artificial_orientation = -1, _is_offshore = false) {
         this.tile = dock;
-        this.is_on_water = _is_on_water;
+        this.is_offshore = _is_offshore;
         
-        if(!_is_on_water) {
+        if(!_is_offshore) {
             /* We need to find the hill tile. */
             if(AIMarine.IsDockTile(dock) && AITile.GetSlope(dock) == AITile.SLOPE_FLAT) {
                 if(AIMarine.IsDockTile(dock + NORTH))
@@ -63,11 +63,15 @@ function Dock::GetName() {
     return AIStation.GetName(AIStation.GetStationID(this.tile));
 }
 
-/* Returns the dock's tile which is on water. */
-function Dock::GetOnWaterTile(dest = -1) {
+/* Returns the dock's tile which is a target for pathfinder
+   - standard coast dock - front part of the dock (for line or coast pathfinder)
+   - offshore dock - water tile in the destination direction, not obscured by oil rig
+   - land dock - canal tile in front of the dock
+ */
+function Dock::GetPfTile(dest = -1) {
     /* Some industries (offshores only?) can have a dock built on water which will break the line pathfinder. 
        We need to find a tile that is not obstructed by the industry itself. */
-    if(this.is_on_water) {
+    if(this.is_offshore) {
         if(dest == -1)
             return -1;
         
@@ -280,7 +284,7 @@ function Dock::GetLockNearby() {
 }
 
 function Dock::EstimateCost() {
-    if(this.is_on_water || AIMarine.IsDockTile(this.tile))
+    if(this.is_offshore || AIMarine.IsDockTile(this.tile))
         return 0;
     
     if(!this.is_landdock)
@@ -296,7 +300,7 @@ function Dock::EstimateCost() {
 
 function Dock::Build() {
     /* Already there. */
-    if(this.is_on_water ||
+    if(this.is_offshore ||
         (AIMarine.IsDockTile(this.tile)  && (AITile.GetOwner(this.tile) == AICompany.ResolveCompanyID(AICompany.COMPANY_SELF))))
         return this.tile;
         
@@ -469,7 +473,7 @@ function Dock::BuildWaterDepot() {
     local depotarea = AITileList();
     SafeAddRectangle(depotarea, this.tile, 5);
     depotarea.RemoveItem(this.tile);
-    if(!is_landdock && !is_on_water) {
+    if(!is_landdock && !is_offshore) {
         depotarea.RemoveItem(GetHillFrontTile(this.tile, 1));
         depotarea.RemoveItem(GetHillFrontTile(this.tile, 2));
     }

@@ -29,8 +29,8 @@ function WaterPathfinder::_IsWater(tile) {
 function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts, use_canals) {
     this.paths = [];
     this.is_canal = [];
-    local start = dock1.GetOnWaterTile();
-    local end = dock2.GetOnWaterTile();
+    local start = dock1.GetPfTile(dock2.tile);
+    local end = dock2.GetPfTile(dock1.tile);
     if(start == -1 || end == -1 || start == end || max_path_len <= 0)
         return false;
 
@@ -75,6 +75,13 @@ function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts, use_ca
         if(e2 < dy) { err += dx; y0 += sy; }
     }
 
+    /* For the landdocks we need to avoid going over tiles where the dock will be placed */
+    local ignored = [];
+    if(dock1.is_landdock)
+        ignored.extend(dock1.GetOccupiedTiles());
+    if(dock2.is_landdock)
+        ignored.extend(dock2.GetOccupiedTiles());
+
     /* Try to avoid obstacles */
     for(local i=1; i<straight_paths.len(); i++) {
         this.paths.push(straight_paths[i-1]);
@@ -92,7 +99,7 @@ function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts, use_ca
             /* No coast path, let's try planning a canal */
             if(!use_canals)
                 return false;
-            if(canal_pf.FindPath(obs_start, obs_end, max_obs_len)) {
+            if(canal_pf.FindPath(obs_start, obs_end, max_obs_len, ignored)) {
                 /* We found a suitable canal */
                 this.paths.push(canal_pf.path);
                 this.is_canal.push(true);
@@ -105,14 +112,6 @@ function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts, use_ca
     if(straight_paths.len() > 0) {
         this.paths.push(straight_paths.top());
         this.is_canal.push(false);
-    }
-
-    local i = 0;
-    foreach(path in this.paths) {
-        if(this.is_canal[i]) {
-            AISign.BuildSign(path[0], "ps");
-            AISign.BuildSign(path[path.len()-1], "pe"); 
-        }
     }
 
     return true;
@@ -178,14 +177,20 @@ function WaterPathfinder::BuildCanals() {
     foreach(path in this.paths) {
         if(this.is_canal[i]) {
             foreach(tile in path) {
-                if(!AIMarine.IsDockTile(tile) && !AITile.IsWaterTile(tile) && !AIMarine.IsCanalTile(tile) 
-                && !AIMarine.IsBuoyTile(tile) && !AIMarine.IsLockTile(tile)) {
-                    if(IsSimpleSlope(tile)) {
-                        if(!AIMarine.BuildLock(tile))
-                            return false;
-                    } else {
-                        if(!AIMarine.BuildCanal(tile))
-                            return false;
+                if(AIMarine.IsDockTile(tile) || AITile.IsWaterTile(tile) || 
+                   AIMarine.IsCanalTile(tile) || AIMarine.IsBuoyTile(tile) ||
+                   AIMarine.IsLockTile(tile))
+                    continue;
+                
+                if(IsSimpleSlope(tile)) {
+                    if(!AIMarine.BuildLock(tile)) {
+                        AISign.BuildSign(tile, "L");
+                        return false;
+                    }
+                } else {
+                    if(!AIMarine.BuildCanal(tile)) {
+                        AISign.BuildSign(tile, "C");
+                        return false;
                     }
                 }
             }

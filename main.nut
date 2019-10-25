@@ -33,7 +33,10 @@ function ShipAI::Start() {
         local new_ferries = ferry.BuildFerryRoutes();
 
         /* Return the loan if we have the money. */
-        AICompany.SetLoanAmount(0);
+        if( AICompany.GetBankBalance(AICompany.COMPANY_SELF) - 
+            AICompany.GetQuarterlyExpenses(AICompany.COMPANY_SELF, AICompany.CURRENT_QUARTER) -
+            2 * AICompany.GetLoanInterval() > AICompany.GetLoanAmount())
+            AICompany.SetLoanAmount(0);
         
         /* Build statues if we have a lot of money left, they increase the stations ratings. */
         local statues_founded = BuildStatuesIfRich();

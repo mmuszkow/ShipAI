@@ -76,11 +76,13 @@ function CanalPathfinder::_Neighbours(self, path, cur_node) {
         cur_node + WEST,
         cur_node + EAST
     ];
-    foreach(tile in offsets)
-        if((AITile.GetSlope(tile) == AITile.SLOPE_FLAT) && 
-            (AITile.IsBuildable(tile) || AIMarine.IsCanalTile(tile) || AIMarine.IsLockTile(tile) || AIMarine.IsBuoyTile(tile) || _IsRiverTile(tile)) &&
-            !AIMarine.IsWaterDepotTile(tile))
+    foreach(tile in offsets) {        
+        if(AITile.GetSlope(tile) != AITile.SLOPE_FLAT)
+            continue;
+        if( AITile.IsBuildable(tile) || AIMarine.IsCanalTile(tile) ||
+            AIMarine.IsLockTile(tile) || AIMarine.IsBuoyTile(tile) || _IsRiverTile(tile))
             tiles.append([tile, self._GetDirection(cur_node, tile)]);
+    }
 
     return tiles;
 }
