@@ -48,7 +48,7 @@ function Town::GetExistingDock(cargo) {
     local docks = AIStationList(AIStation.STATION_DOCK);
     docks.Valuate(AIStation.GetNearestTown);
     docks.KeepValue(this.id);    
-    for(local dock = docks.Begin(); docks.HasNext(); dock = docks.Next()) {
+    for(local dock = docks.Begin(); !docks.IsEnd(); dock = docks.Next()) {
         local dock_loc = AIStation.GetLocation(dock);
         if(AITile.GetCargoAcceptance(dock_loc, cargo, 1, 1, radius) > 7)
             return Dock(dock_loc);

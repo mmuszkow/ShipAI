@@ -78,7 +78,7 @@ function Industry::GetPossiblePortTile(orientation) {
         tiles.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
             
         /* It's furter in W-E direction, we need 3x5 flat tiles. */        
-        for(local possible = tiles.Begin(); tiles.HasNext(); possible = tiles.Next()) {
+        for(local possible = tiles.Begin(); !tiles.IsEnd(); possible = tiles.Next()) {
             local flat = AITileList();
             local top_left;
             if(orientation == 0) {
@@ -112,7 +112,7 @@ function Industry::GetPossiblePortTile(orientation) {
         tiles.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
         
         /* It's further in N-S direction, we need 5x3 flat tiles */
-        for(local possible = tiles.Begin(); tiles.HasNext(); possible = tiles.Next()) {
+        for(local possible = tiles.Begin(); !tiles.IsEnd(); possible = tiles.Next()) {
             local flat = AITileList();
             local top_left;
             if(orientation == 1) {

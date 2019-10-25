@@ -16,8 +16,6 @@ class Water {
     max_path_len = 400;
     /* Max dock distance from the city center. */
     max_city_dock_distance = 20;
-    /* Min money left after buying something. */
-    min_balance = 20000;
 
     /* Maintenance helper. */
     _maintenance = null;
@@ -54,7 +52,9 @@ function Water::AreShipsAllowed() {
 }
 
 function Water::WaitToHaveEnoughMoney(cost) {
-    while(cost + this.min_balance > AICompany.GetBankBalance(AICompany.COMPANY_SELF)) {}
+    while(cost + 2 * AICompany.GetLoanInterval() >
+          AICompany.GetQuarterlyExpenses(AICompany.COMPANY_SELF, AICompany.CURRENT_QUARTER) 
+        + AICompany.GetBankBalance(AICompany.COMPANY_SELF)) {}
 }
 
 function Water::GetTownsThatCanHaveDock(cargo, towns = AITownList()) {

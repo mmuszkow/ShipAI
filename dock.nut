@@ -479,7 +479,7 @@ function Dock::BuildWaterDepot() {
     depotarea.KeepAboveValue(3);
     depotarea.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
     
-    for(local depot = depotarea.Begin(); depotarea.HasNext(); depot = depotarea.Next())
+    for(local depot = depotarea.Begin(); !depotarea.IsEnd(); depot = depotarea.Next())
         if(_TryBuildWaterDepot(depot) != -1)
             return depot;
     return -1;

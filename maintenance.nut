@@ -30,7 +30,7 @@ function Maintenance::SellUnprofitable() {
     
     /* Sell unprofitable in depots. */
     local unprofitable = AIVehicleList_Group(this._sell_group);
-    for(local vehicle = unprofitable.Begin(); unprofitable.HasNext(); vehicle = unprofitable.Next()) {
+    for(local vehicle = unprofitable.Begin(); !unprofitable.IsEnd(); vehicle = unprofitable.Next()) {
         if(AIVehicle.IsStoppedInDepot(vehicle))
             if(AIVehicle.SellVehicle(vehicle))
                 sold++;
@@ -48,13 +48,11 @@ function Maintenance::SellUnprofitable() {
     unprofitable.KeepAboveValue(1095); /* 3 years old minimum */
     unprofitable.Valuate(AIVehicle.IsValidVehicle);
     unprofitable.KeepValue(1);
-    for(local vehicle = unprofitable.Begin(); unprofitable.HasNext(); vehicle = unprofitable.Next()) {
+    for(local vehicle = unprofitable.Begin(); !unprofitable.IsEnd(); vehicle = unprofitable.Next()) {
         
-        /* If 2 first orders are for servicing the vehicle in depot when it's age is above the max. 
-           This method is better because vehicle won't get lost (especially ship).
-         */
-        if(AIOrder.IsConditionalOrder(vehicle, 0) && AIOrder.IsGotoDepotOrder(vehicle, 1)) {
-            local depot = AIOrder.GetOrderDestination(vehicle, 1);
+        /* Manually guide the ship to his depot so it doesn't get lost. */
+        if(AIOrder.IsGotoDepotOrder(vehicle, 0)) {
+            local depot = AIOrder.GetOrderDestination(vehicle, 0);
             /* UnshareOrders remove all orders from the list, we need to make a copy of the buoys location before. */
             local buoys = [];
             local ord_count = AIOrder.GetOrderCount(vehicle);
@@ -62,14 +60,16 @@ function Maintenance::SellUnprofitable() {
                 if(AIOrder.IsGotoWaypointOrder(vehicle, ord_pos))
                     buoys.append(AIOrder.GetOrderDestination(vehicle, ord_pos));
             }
-            
+           
             AIOrder.UnshareOrders(vehicle);
             foreach(buoy in buoys)
                 AIOrder.AppendOrder(vehicle, buoy, AIOrder.OF_NONE);
+
+            /* Make a final stop in depot. */
             AIOrder.AppendOrder(vehicle, depot, AIOrder.OF_STOP_IN_DEPOT);
                 
         } else {
-            AILog.Error("No max age send to depot order");
+            AILog.Error("Failed to send ship for selling, first order is not a go to depot order");
             continue;
         }
         
@@ -87,7 +87,7 @@ function Maintenance::Upgrade() {
     
     local cargos = AICargoList();
     local replacements = AIList();
-    for(local cargo = cargos.Begin(); cargos.HasNext(); cargo = cargos.Next()) {
+    for(local cargo = cargos.Begin(); !cargos.IsEnd(); cargo = cargos.Next()) {
         /* Let's check what possible engines we have for this cargo. */
         if(!ship_model.ExistsForCargo(cargo))
             continue;
@@ -97,7 +97,7 @@ function Maintenance::Upgrade() {
         vehicles.Valuate(AIVehicle.GetCapacity, cargo);
         vehicles.KeepAboveValue(0);
         
-        for(local vehicle = vehicles.Begin(); vehicles.HasNext(); vehicle = vehicles.Next()) {
+        for(local vehicle = vehicles.Begin(); !vehicles.IsEnd(); vehicle = vehicles.Next()) {
             local current_model = AIVehicle.GetEngineType(vehicle);
 
             local better_model = -1;
@@ -113,16 +113,18 @@ function Maintenance::Upgrade() {
             
             local double_price = 2 * AIEngine.GetPrice(better_model);
             
-            /* The company needs to have more money than (autoreplace money limit) + 2 * (price for new vehicle). */
-            if(AICompany.GetBankBalance(AICompany.COMPANY_SELF) < double_price + min_balance)
+            if( AICompany.GetBankBalance(AICompany.COMPANY_SELF) -
+                AICompany.GetQuarterlyExpenses(AICompany.COMPANY_SELF, AICompany.CURRENT_QUARTER) < 
+                double_price + min_balance)
                 return sent_to_upgrade;
             
             AIGroup.SetAutoReplace(AIGroup.GROUP_DEFAULT, current_model, better_model);
+            AILog.Info("Replacing " + AIEngine.GetName(current_model) + " with " + AIEngine.GetName(better_model));
             
             /* We need to send the vehicle to depot to be replaced but we should do this only when the vehicle is close to the depot (1st or last order). */
             local last_order = AIOrder.GetOrderCount(vehicle) - 1;
             local current_order = AIOrder.ResolveOrderPosition(vehicle, AIOrder.ORDER_CURRENT);
-            if((current_order >= 0 && current_order <= 2) || current_order == last_order) {
+            if((current_order >= 0 && current_order <= 1) || current_order == last_order) {
                 if(!AIOrder.IsGotoDepotOrder(vehicle, AIOrder.ORDER_CURRENT)) {
                     if(AIVehicle.SendVehicleToDepotForServicing(vehicle)) {
                         sent_to_upgrade++;

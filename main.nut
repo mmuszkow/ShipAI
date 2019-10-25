@@ -62,11 +62,17 @@ function ShipAI::SetCompanyName() {
         AICompany.SetPresidentName("Mrs. Rivkah Blumfeld");
 }
 
+function ShipAI::WeAreRich() {
+    return AICompany.GetBankBalance(AICompany.COMPANY_SELF) -
+           AICompany.GetQuarterlyExpenses(AICompany.COMPANY_SELF, AICompany.CURRENT_QUARTER) >
+           10 * AICompany.GetMaxLoanAmount();
+}
+
 /* Build statues in the cities we have any station. */
 function ShipAI::BuildStatuesIfRich() {
     local founded = 0;
-    
-    if(AICompany.GetBankBalance(AICompany.COMPANY_SELF) < 10 * AICompany.GetMaxLoanAmount())
+   
+    if(!WeAreRich())
         return founded;
     
     local towns = AITownList();
@@ -77,8 +83,8 @@ function ShipAI::BuildStatuesIfRich() {
     towns.Valuate(AITown.IsActionAvailable, AITown.TOWN_ACTION_BUILD_STATUE);
     towns.KeepValue(1);
     
-    for(local town = towns.Begin(); towns.HasNext(); town = towns.Next()) {
-        if(AICompany.GetBankBalance(AICompany.COMPANY_SELF) < 10 * AICompany.GetMaxLoanAmount())
+    for(local town = towns.Begin(); !towns.IsEnd(); town = towns.Next()) {
+        if(!WeAreRich())
             return founded;
         if(AITown.PerformTownAction(town, AITown.TOWN_ACTION_BUILD_STATUE)) {
             AILog.Info("Building statue in " + AITown.GetName(town));
@@ -89,3 +95,4 @@ function ShipAI::BuildStatuesIfRich() {
     
     return founded;
 }
+

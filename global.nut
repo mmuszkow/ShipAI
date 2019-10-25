@@ -5,7 +5,9 @@ areCanalsAllowed <- false;
 
 function SetCanalsAllowedFlag() {    
     areCanalsAllowed =  AIController.GetSetting("build_canals") && 
-                        (AICompany.GetBankBalance(AICompany.COMPANY_SELF) > 2 * AICompany.GetMaxLoanAmount());
+                        (AICompany.GetBankBalance(AICompany.COMPANY_SELF) -
+                         AICompany.GetQuarterlyExpenses(AICompany.COMPANY_SELF, AICompany.CURRENT_QUARTER)
+                         > 2 * AICompany.GetMaxLoanAmount());
 }
 
 /* This is global to have single vehicle capatcity cache. */

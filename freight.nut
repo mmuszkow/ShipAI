@@ -50,7 +50,7 @@ function Freight::BuildTownFreightRoutes() {
     cargos.Valuate(AICargo.GetCargoIncome, 150, 100);
     cargos.Sort(AIList.SORT_BY_VALUE, AIList.SORT_DESCENDING); /* Sort by payment rates. */
     
-    for(local cargo = cargos.Begin(); cargos.HasNext(); cargo = cargos.Next()) {
+    for(local cargo = cargos.Begin(); !cargos.IsEnd(); cargo = cargos.Next()) {
                 
         local min_capacity = ship_model.GetMinCapacityForCargo(cargo);
         /* There is no vehicle to transport this cargo. */
@@ -60,7 +60,7 @@ function Freight::BuildTownFreightRoutes() {
         local producers = GetCargoProducersThatCanHaveDock(cargo);
         local acceptors = GetTownsThatCanHaveDock(cargo);
         
-        for(local producer_id = producers.Begin(); producers.HasNext(); producer_id = producers.Next()) {
+        for(local producer_id = producers.Begin(); !producers.IsEnd(); producer_id = producers.Next()) {
             
             this._maintenance.PerformIfNeeded();
             
@@ -107,7 +107,7 @@ function Freight::BuildTownFreightRoutes() {
                 }
             }
             
-            for(local acceptor_id = close_acceptors.Begin(); close_acceptors.HasNext(); acceptor_id = close_acceptors.Next()) {
+            for(local acceptor_id = close_acceptors.Begin(); !close_acceptors.IsEnd(); acceptor_id = close_acceptors.Next()) {
                 
                 /* Let's get more info about the starting dock. */ 
                 if(dock1 == null) {
@@ -170,7 +170,7 @@ function Freight::BuildIndustryFreightRoutes() {
     cargos.Valuate(AICargo.GetCargoIncome, 150, 100);
     cargos.Sort(AIList.SORT_BY_VALUE, AIList.SORT_DESCENDING); /* Sort by payment rates. */
     
-    for(local cargo = cargos.Begin(); cargos.HasNext(); cargo = cargos.Next()) {
+    for(local cargo = cargos.Begin(); !cargos.IsEnd(); cargo = cargos.Next()) {
         
         local min_capacity = ship_model.GetMinCapacityForCargo(cargo);
         /* There is no vehicle to transport this cargo. */
@@ -180,7 +180,7 @@ function Freight::BuildIndustryFreightRoutes() {
         local producers = GetCargoProducersThatCanHaveDock(cargo);
         local acceptors = GetIndustriesThatCanHaveDock(AIIndustryList_CargoAccepting(cargo));
         
-        for(local producer_id = producers.Begin(); producers.HasNext(); producer_id = producers.Next()) {
+        for(local producer_id = producers.Begin(); !producers.IsEnd(); producer_id = producers.Next()) {
             
             this._maintenance.PerformIfNeeded();
             
@@ -228,7 +228,7 @@ function Freight::BuildIndustryFreightRoutes() {
             close_acceptors.RemoveValue(0);
             close_acceptors.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
             
-            for(local acceptor_id = close_acceptors.Begin(); close_acceptors.HasNext(); acceptor_id = close_acceptors.Next()) {
+            for(local acceptor_id = close_acceptors.Begin(); !close_acceptors.IsEnd(); acceptor_id = close_acceptors.Next()) {
                 
                 /* Industries may get closed. */
                 if(!AIIndustry.IsValidIndustry(acceptor_id))

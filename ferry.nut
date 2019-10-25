@@ -50,7 +50,7 @@ function Ferry::BuildFerryRoutes() {
         
     local towns = GetTownsThatCanHavePassengerDock();
     
-    for(local town_id = towns.Begin(); towns.HasNext(); town_id = towns.Next()) {
+    for(local town_id = towns.Begin(); !towns.IsEnd(); town_id = towns.Next()) {
         
         this._maintenance.PerformIfNeeded();
         
@@ -75,7 +75,7 @@ function Ferry::BuildFerryRoutes() {
         towns2.KeepBelowValue(this.max_distance); /* Cities too far away. */
         towns2.KeepAboveValue(this.min_distance); /* Cities too close. */
         
-        for(local town2_id = towns2.Begin(); towns2.HasNext(); town2_id = towns2.Next()) {
+        for(local town2_id = towns2.Begin(); !towns2.IsEnd(); town2_id = towns2.Next()) {
             local town2 = Town(town2_id);
             local dock2 = town2.GetExistingDock(this._passenger_cargo_id);
             
