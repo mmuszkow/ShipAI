@@ -2,9 +2,9 @@ require("dock.nut");
 require("industry.nut");
 require("global.nut");
 require("maintenance.nut");
+require("pf_water.nut");
 require("town.nut");
 require("utils.nut");
-require("pathfinder/water_pathfinder.nut");
 
 /* Water utils. */
 class Water {

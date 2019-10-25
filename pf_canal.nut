@@ -1,3 +1,6 @@
+require("lock.nut");
+require("utils.nut");
+
 class CanalPathfinder {
     _aystar_class = null;
     _aystar = null;
@@ -6,16 +9,23 @@ class CanalPathfinder {
 
     path = [];
     
-    /* when using bananas, we cannot use '..' in require, so we cannot include global.nut */
-    NORTH = AIMap.GetTileIndex(0, -1);
-    SOUTH = AIMap.GetTileIndex(0, 1);
-    WEST = AIMap.GetTileIndex(1, 0);
-    EAST = AIMap.GetTileIndex(-1, 0);
-    
     constructor() {
         _aystar_class = import("graph.aystar", "", 6);
         _aystar = _aystar_class(this, this._Cost, this._Estimate, this._Neighbours, this._CheckDirection);
     }
+}
+
+function CanalPathfinder::_FindAdjacentLockTile(tile, direction) {
+    local tiles = AITileList();
+    SafeAddRectangle(tiles, tile, 1);
+    tiles.Valuate(_val_IsLockCapable);
+    tiles.KeepValue(1);
+    tiles.Valuate(AIMap.DistanceManhattan, direction);
+    tiles.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
+    if(tiles.IsEmpty())
+        return -1;
+
+    return tiles.Begin();
 }
 
 function CanalPathfinder::FindPath(start, end, max_distance, ignored = []) {
@@ -26,6 +36,15 @@ function CanalPathfinder::FindPath(start, end, max_distance, ignored = []) {
     local dist = AIMap.DistanceManhattan(start, end);
     max_distance = min(max_distance, 50); /* TODO: improve performance instead */
     if(dist == -1 || dist > max_distance)
+        return false;
+
+    /* We operate on land only, so if any of the points is on water we need to 
+     * find adjacent tile capable of hosting a lock */
+    if(AITile.IsWaterTile(start) && (AITile.GetMaxHeight(start) == 0))
+        start = _FindAdjacentLockTile(start, end);
+    if(AITile.IsWaterTile(end) && (AITile.GetMaxHeight(end) == 0))
+        end = _FindAdjacentLockTile(end, start);
+    if(start == -1 || end == -1)
         return false;
 
     this._dest = end;
@@ -42,11 +61,6 @@ function CanalPathfinder::FindPath(start, end, max_distance, ignored = []) {
     return true;
 }
 
-function _IsRiverTile(tile) {
-    /* assuming slope is flat */
-    return AITile.IsWaterTile(tile) && (AITile.GetMaxHeight(tile) > 0);
-}
-
 function CanalPathfinder::_Cost(self, path, new_tile, new_direction) {
     if(path == null) return 0;
     
@@ -54,7 +68,7 @@ function CanalPathfinder::_Cost(self, path, new_tile, new_direction) {
     if( AIMarine.IsCanalTile(new_tile) || 
         AIMarine.IsLockTile(new_tile) ||
         AIMarine.IsBuoyTile(new_tile) || 
-        _IsRiverTile(new_tile))
+        (AITile.IsWaterTile(new_tile) && (AITile.GetMaxHeight(new_tile) > 0))) /* river */
         return path.GetCost() + 1;
     
     /* Creating new canal tile */
@@ -80,7 +94,8 @@ function CanalPathfinder::_Neighbours(self, path, cur_node) {
         if(AITile.GetSlope(tile) != AITile.SLOPE_FLAT)
             continue;
         if( AITile.IsBuildable(tile) || AIMarine.IsCanalTile(tile) ||
-            AIMarine.IsLockTile(tile) || AIMarine.IsBuoyTile(tile) || _IsRiverTile(tile))
+            AIMarine.IsLockTile(tile) || AIMarine.IsBuoyTile(tile) || 
+            (AITile.IsWaterTile(tile) && (AITile.GetMaxHeight(tile) > 0)))
             tiles.append([tile, self._GetDirection(cur_node, tile)]);
     }
 

@@ -205,8 +205,9 @@ function _val_IsLockCapable(tile) {
              (AITile.IsBuildable(back2)  || AITile.IsWaterTile(back2)));
 }
 
+/* Should be used only for sea */
 function _val_IsWaterDepotCapable(tile, orientation) {
-    if(!AITile.IsWaterTile(tile) || AIBridge.IsBridgeTile(tile))
+    if(!AITile.IsWaterTile(tile) || AITile.GetMaxHeight(tile) > 0 || AIBridge.IsBridgeTile(tile))
         return false;
     
     local back, front;

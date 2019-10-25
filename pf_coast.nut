@@ -1,3 +1,5 @@
+require("utils.nut");
+
 /* Greedy path search, much faster than A* */
 class CoastPathfinder {   
     tile = -1;
@@ -5,12 +7,6 @@ class CoastPathfinder {
     direction = 0;
     path = [];
     
-    /* when using bananas, we cannot use '..' in require, so we cannot include global.nut */
-    NORTH = AIMap.GetTileIndex(0, -1);
-    SOUTH = AIMap.GetTileIndex(0, 1);
-    WEST = AIMap.GetTileIndex(1, 0);
-    EAST = AIMap.GetTileIndex(-1, 0);
-        
     constructor() {}
 }
 
@@ -43,7 +39,7 @@ function CoastPathfinder::_IsWaterTile(tile) {
     return  (AITile.IsWaterTile(tile) && AITile.GetMaxHeight(tile) == 0) || /* exclude rivers */
             AIMarine.IsBuoyTile(tile) ||
             AIMarine.IsDockTile(tile) ||
-            (AIMarine.IsLockTile(tile) && AITile.GetMaxHeight(tile) == 0) ||
+            (AIMarine.IsLockTile(tile) && (AITile.GetMaxHeight(tile) == 0)) ||
             AIMarine.IsWaterDepotTile(tile);
 }
 
