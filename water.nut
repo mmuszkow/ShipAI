@@ -159,8 +159,14 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
     /* Schedule path. */
     local load_order = full_load ? AIOrder.OF_FULL_LOAD : AIOrder.OF_NONE;
     
-    if(!AIOrder.AppendOrder(vehicle, dock1.tile, load_order)) {
+    if(!AIOrder.AppendOrder(vehicle, depot, AIOrder.OF_SERVICE_IF_NEEDED)) {
         AILog.Error("Failed to schedule the ship for " + dock1.GetName() + "-" + dock2.GetName() + " route (1): " + AIError.GetLastErrorString());
+        AIVehicle.SellVehicle(vehicle);
+        return false;
+    }
+
+    if(!AIOrder.AppendOrder(vehicle, dock1.tile, load_order)) {
+        AILog.Error("Failed to schedule the ship for " + dock1.GetName() + "-" + dock2.GetName() + " route (2): " + AIError.GetLastErrorString());
         AIVehicle.SellVehicle(vehicle);
         return false;
     }
@@ -168,13 +174,13 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
     /* Buoys. */
     foreach(buoy in buoys)
         if(!AIOrder.AppendOrder(vehicle, buoy, AIOrder.OF_NONE)) {
-            AILog.Error("Failed to schedule the ship for " + dock1.GetName() + "-" + dock2.GetName() + " route (2): " + AIError.GetLastErrorString());
+            AILog.Error("Failed to schedule the ship for " + dock1.GetName() + "-" + dock2.GetName() + " route (3): " + AIError.GetLastErrorString());
             AIVehicle.SellVehicle(vehicle);
             return false;
         }
         
     if(!AIOrder.AppendOrder(vehicle, dock2.tile, AIOrder.OF_NONE)) {
-        AILog.Error("Failed to schedule the ship for " + dock1.GetName() + "-" + dock2.GetName() + " route (3): " + AIError.GetLastErrorString());
+        AILog.Error("Failed to schedule the ship for " + dock1.GetName() + "-" + dock2.GetName() + " route (4): " + AIError.GetLastErrorString());
         AIVehicle.SellVehicle(vehicle);
         return false;
     }
@@ -183,25 +189,11 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
     buoys.reverse();
     foreach(buoy in buoys)
         if(!AIOrder.AppendOrder(vehicle, buoy, AIOrder.OF_NONE)) {
-            AILog.Error("Failed to schedule the ship for " + dock1.GetName() + "-" + dock2.GetName() + " route (4): " + AIError.GetLastErrorString());
+            AILog.Error("Failed to schedule the ship for " + dock1.GetName() + "-" + dock2.GetName() + " route (5): " + AIError.GetLastErrorString());
             AIVehicle.SellVehicle(vehicle);
             return false;
         }
         
-    /* Send for maintanance if too old. This is safer here, cause the vehicle won't get lost
-       and also saves us some opcodes. */
-    if(    !AIOrder.InsertConditionalOrder(vehicle, 0, 0)
-        || !AIOrder.InsertOrder(vehicle, 1, depot, AIOrder.OF_NONE) /* why OF_SERVICE_IF_NEEDED doesn't work? */
-        || !AIOrder.SetOrderCondition(vehicle, 0, AIOrder.OC_REMAINING_LIFETIME)
-        || !AIOrder.SetOrderCompareFunction(vehicle, 0, AIOrder.CF_MORE_THAN)
-        || !AIOrder.SetOrderCompareValue(vehicle, 0, 0)
-        ) {
-        AILog.Error("Failed to schedule the autoreplacement order for " + dock1.GetName() + "-" + dock2.GetName() + " route: " + AIError.GetLastErrorString());
-        AIVehicle.SellVehicle(vehicle);
-        return false;
-    }
-    
-    //AIVehicle.SetName(vehicle, "");
     if(!AIVehicle.StartStopVehicle(vehicle)) {
         AILog.Error("Failed to start the ship: " + AIError.GetLastErrorString());
         AIVehicle.SellVehicle(vehicle);
