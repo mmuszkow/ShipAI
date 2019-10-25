@@ -4,7 +4,7 @@ require("utils.nut");
 class Dock {
     tile = -1;
     orientation = -1;
-    is_artificial = false;
+    is_landdock = false;
     is_on_water = false;
     
     constructor(dock, artificial_orientation = -1, _is_on_water = false) {
@@ -27,7 +27,7 @@ class Dock {
             if(artificial_orientation != -1) {
                 /* Artificial dock. */
                 this.orientation = artificial_orientation;
-                this.is_artificial = true;
+                this.is_landdock = true;
             } else {
                 /* Coast dock or existing one. */
                 switch(AITile.GetSlope(this.tile)) {
@@ -53,7 +53,7 @@ class Dock {
                 }
                 
                 if(this.orientation != -1 && AIMarine.IsCanalTile(GetHillFrontTile(this.tile, 2)))
-                    this.is_artificial = true;
+                    this.is_landdock = true;
             }
         }
     }
@@ -63,10 +63,8 @@ function Dock::GetName() {
     return AIStation.GetName(AIStation.GetStationID(this.tile));
 }
 
-/* Line pathfinder takes 2 water tiles as input.
-   Coast pathfinder takes 2 coast tiles as input.
-   Canal pathfinder takes 2 canal tiles as input. */   
-function Dock::GetPfTile(dest = -1) {
+/* Returns the dock's tile which is on water. */
+function Dock::GetOnWaterTile(dest = -1) {
     /* Some industries (offshores only?) can have a dock built on water which will break the line pathfinder. 
        We need to find a tile that is not obstructed by the industry itself. */
     if(this.is_on_water) {
@@ -82,29 +80,28 @@ function Dock::GetPfTile(dest = -1) {
         
         return water.Begin();
     }
-    
-    /* For artificial industries (canal pathfinder) we take the canal tile in front of the dock. */
-    if(this.is_artificial) {
-        switch(this.orientation) {
-            case 0:
-                /* West. */
-                return this.tile + AIMap.GetTileIndex(2, 0);
-            case 1:
-                /* South. */
-                return this.tile + AIMap.GetTileIndex(0, 2);
-            case 2:
-                /* North. */
-                return this.tile + AIMap.GetTileIndex(0, -2);
-            case 3:
-                /* East. */
-                return this.tile + AIMap.GetTileIndex(-2, 0);
-            default:
-                return -1;
-        }
+
+    /* canal pathfinder needs to start from water tile, not dock tile */   
+    local front = 1;
+    if(this.is_landdock)
+        front = 2;
+ 
+    switch(this.orientation) {
+        case 0:
+            /* West. */
+            return this.tile + AIMap.GetTileIndex(front, 0);
+        case 1:
+            /* South. */
+            return this.tile + AIMap.GetTileIndex(0, front);
+        case 2:
+            /* North. */
+            return this.tile + AIMap.GetTileIndex(0, -front);
+        case 3:
+            /* East. */
+            return this.tile + AIMap.GetTileIndex(-front, 0);
+        default:
+            return -1;
     }
-    
-    /* For coast dock (line, coast pathfinder) we return the coast tile itself. */
-    return this.tile;
 }
 
 function Dock::GetOccupiedTiles() {
@@ -114,7 +111,7 @@ function Dock::GetOccupiedTiles() {
         case 0:
             /* West */
             tiles.append(this.tile + AIMap.GetTileIndex(1, 0));
-            if(this.is_artificial) {        
+            if(this.is_landdock) {        
                 tiles.append(this.tile + AIMap.GetTileIndex(0, 1));
                 tiles.append(this.tile + AIMap.GetTileIndex(0, -1));
                 tiles.append(this.tile + AIMap.GetTileIndex(-1, -1));
@@ -127,7 +124,7 @@ function Dock::GetOccupiedTiles() {
         case 1:
             /* South. */
             tiles.append(this.tile + AIMap.GetTileIndex(0, 1));
-            if(this.is_artificial) {
+            if(this.is_landdock) {
                 tiles.append(this.tile + AIMap.GetTileIndex(-1, 0));
                 tiles.append(this.tile + AIMap.GetTileIndex(1, 0));
                 tiles.append(this.tile + AIMap.GetTileIndex(-1, -1));
@@ -140,7 +137,7 @@ function Dock::GetOccupiedTiles() {
         case 2:
             /* North. */
             tiles.append(this.tile + AIMap.GetTileIndex(0, -1));
-            if(this.is_artificial) {
+            if(this.is_landdock) {
                 tiles.append(this.tile + AIMap.GetTileIndex(-1, 0));
                 tiles.append(this.tile + AIMap.GetTileIndex(1, 0));
                 tiles.append(this.tile + AIMap.GetTileIndex(-1, 1));
@@ -153,7 +150,7 @@ function Dock::GetOccupiedTiles() {
         case 3:
             /* East. */
             tiles.append(this.tile + AIMap.GetTileIndex(-1, 0));
-            if(this.is_artificial) {
+            if(this.is_landdock) {
                 tiles.append(this.tile + AIMap.GetTileIndex(0, -1));
                 tiles.append(this.tile + AIMap.GetTileIndex(0, 1));
                 tiles.append(this.tile + AIMap.GetTileIndex(1, -1));
@@ -286,7 +283,7 @@ function Dock::EstimateCost() {
     if(this.is_on_water || AIMarine.IsDockTile(this.tile))
         return 0;
     
-    if(!this.is_artificial)
+    if(!this.is_landdock)
         return  AIMarine.GetBuildCost(AIMarine.BT_DOCK) + 
                 AITile.GetBuildCost(AITile.BT_CLEAR_FIELDS); /* building on the coast is more expensive + we may need to clear it */
     
@@ -304,7 +301,7 @@ function Dock::Build() {
         return this.tile;
         
     /* Artificial dock. */
-    if(this.is_artificial) {      
+    if(this.is_landdock) {      
         switch(this.orientation) {
             case 0:
                 /* To the West. */
@@ -372,28 +369,28 @@ function Dock::_GetBestWaterDepotLocation() {
     switch(this.orientation) {
         /* West. */
         case 0:
-            if(this.is_artificial)
+            if(this.is_landdock)
                 best = this.tile + AIMap.GetTileIndex(2, -1);
             else
                 best = this.tile + AIMap.GetTileIndex(4, 0);
             break;
         /* South. */
         case 1:
-            if(this.is_artificial)
+            if(this.is_landdock)
                 best = this.tile + AIMap.GetTileIndex(1, 2);
             else
                 best = this.tile + AIMap.GetTileIndex(0, 4);
             break;
         /* North. */
         case 2:
-            if(this.is_artificial)
+            if(this.is_landdock)
                 best = this.tile + AIMap.GetTileIndex(-1, -2);
             else
                 best = this.tile + AIMap.GetTileIndex(0, -4);
             break;
         /* East. */
         default:
-            if(this.is_artificial)
+            if(this.is_landdock)
                 best = this.tile + AIMap.GetTileIndex(-2, 1);
             else
                 best = this.tile + AIMap.GetTileIndex(-4, 0);
@@ -407,7 +404,7 @@ function Dock::FindWaterDepot() {
     local best = _GetBestWaterDepotLocation();
     
     /* Artificial docks have fixed place to build the water depot. */
-    if(this.is_artificial && best == -1)
+    if(this.is_landdock && best == -1)
         return -1;
     
     if(best != -1 &&
@@ -463,7 +460,7 @@ function Dock::BuildWaterDepot() {
     local best = _GetBestWaterDepotLocation();
     
     /* Artificial docks have fixed place to build the water depot. */
-    if(this.is_artificial && best == -1)
+    if(this.is_landdock && best == -1)
         return -1;
     
     if(_TryBuildWaterDepot(best) != -1)
@@ -472,7 +469,7 @@ function Dock::BuildWaterDepot() {
     local depotarea = AITileList();
     SafeAddRectangle(depotarea, this.tile, 5);
     depotarea.RemoveItem(this.tile);
-    if(!is_artificial && !is_on_water) {
+    if(!is_landdock && !is_on_water) {
         depotarea.RemoveItem(GetHillFrontTile(this.tile, 1));
         depotarea.RemoveItem(GetHillFrontTile(this.tile, 2));
     }

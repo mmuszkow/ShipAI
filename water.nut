@@ -2,12 +2,9 @@ require("dock.nut");
 require("industry.nut");
 require("global.nut");
 require("maintenance.nut");
-require("ship_path.nut");
 require("town.nut");
 require("utils.nut");
-require("pathfinder/canal.nut");
-require("pathfinder/coast.nut");
-require("pathfinder/line.nut");
+require("pathfinder/water_pathfinder.nut");
 
 /* Water utils. */
 class Water {
@@ -19,18 +16,16 @@ class Water {
     max_path_len = 400;
     /* Max dock distance from the city center. */
     max_city_dock_distance = 20;
-    /* Minimal money left after buying something. */
+    /* Min money left after buying something. */
     min_balance = 20000;
-    
+
     /* Maintenance helper. */
     _maintenance = null;
     /* Cache for points that are not connected. */
     _not_connected_cache = AIList();
     
-    /* Pathfinders. */
-    _line_pathfinder = StraightLinePathfinder();
-    _coast_pathfinder = CoastPathfinder();
-    _canal_pathfinder = CanalPathfinder();
+    /* Pathfinder. */
+    pf = WaterPathfinder();
     
     constructor() {
         _maintenance = Maintenance();
@@ -75,241 +70,6 @@ function Water::GetTownsThatCanHaveDock(cargo, towns = AITownList()) {
         merged.AddList(splitted);
     }
     return merged;
-}
-
-/* Finds a path between 2 points on sea/lakes. */
-function Water::FindOpenWaterPath(start, end, max_len) {
-    if( this._not_connected_cache.HasItem(start << 32 | end) ||
-        this._not_connected_cache.HasItem(end << 32 | start))
-        return [];
-    
-    /* We have a straight line connection - great! */
-    if(this._line_pathfinder.FindPath(start, end, max_len))
-        return this._line_pathfinder.path;
-
-    /* Try to continue along the coast. */
-    if((AITile.IsCoastTile(this._line_pathfinder.fail_point) || AIMarine.IsDockTile(this._line_pathfinder.fail_point)) &&
-        this._coast_pathfinder.FindPath(this._line_pathfinder.fail_point, end, max_len - this._line_pathfinder.path.len())) {
-        local path = this._line_pathfinder.path;
-        path.extend(this._coast_pathfinder.path);
-        return path;
-    }
-    
-    /* Try the other way. */
-    if(this._line_pathfinder.FindPath(end, start, max_len)) {
-        this._line_pathfinder.path.reverse();
-        return this._line_pathfinder.path;
-    }
-    if((AITile.IsCoastTile(this._line_pathfinder.fail_point) || AIMarine.IsDockTile(this._line_pathfinder.fail_point)) &&
-        this._coast_pathfinder.FindPath(this._line_pathfinder.fail_point, start, max_len - this._line_pathfinder.path.len())) {
-        local path = this._line_pathfinder.path;
-        path.extend(this._coast_pathfinder.path);
-        path.reverse();
-        return path;
-    }
-    
-    /* Just following the coast */
-    //if(this._coast_pathfinder.FindPath(start, end, max_len))
-        //return this._coast_pathfinder.path;
-    
-    this._not_connected_cache.AddItem(start << 32 | end, 1);
-    return [];
-}
-
-function Water::_FindLockPlace(coast, dock1_tile, dock2_tile) {
-    /* Find any existing lock. */
-    local neighbours = AITileList();
-    SafeAddRectangle(neighbours, coast, 5);
-    neighbours.Valuate(AIMarine.IsLockTile);
-    neighbours.KeepValue(1);
-    neighbours.Valuate(AITile.GetSlope);
-    neighbours.RemoveValue(AITile.SLOPE_FLAT);
-    if(!neighbours.IsEmpty()) {
-        neighbours.Valuate(AIMap.DistanceManhattan, coast);
-        neighbours.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
-        return neighbours.Begin();
-    }
-    
-    neighbours = AITileList();
-    SafeAddRectangle(neighbours, coast, 5);
-    neighbours.RemoveItem(dock1_tile);
-    neighbours.RemoveItem(dock2_tile);
-    neighbours.Valuate(AITile.IsCoastTile);
-    neighbours.KeepValue(1);
-    neighbours.Valuate(_val_IsLockCapable);
-    neighbours.KeepValue(1);
-    if(neighbours.IsEmpty())
-        return -1;
-    
-    neighbours.Valuate(AIMap.DistanceManhattan, coast);
-    neighbours.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
-    return neighbours.Begin();
-}
-
-/* Same as _FindWaterPath, but including canals and taking docks as input. */
-function Water::FindWaterPath(dock1, dock2, max_len) {
-    if( this._not_connected_cache.HasItem(dock1.tile << 32 | dock2.tile) ||
-        this._not_connected_cache.HasItem(dock2.tile << 32 | dock1.tile))
-        return ShipPath(dock1, dock2);
-    
-    /* Both docks are on sea/lake. */
-    if(!dock1.is_artificial && !dock2.is_artificial) {       
-        local open_water = FindOpenWaterPath(dock1.GetPfTile(dock2.tile), dock2.GetPfTile(dock2.tile), max_len);
-        if(open_water.len() == 0)
-            this._not_connected_cache.AddItem(dock1.tile << 32 | dock2.tile, 1);
-        return ShipPath(dock1, dock2, [], open_water, []);
-    }
-    
-    /* One of the docks is artificial, so we won't be able to reach it. */
-    if(!areCanalsAllowed)
-        return ShipPath(dock1, dock2);
-    
-    /* Don't use tiles occupied by docks and locks. */ 
-    local coast_cross = dock1.GetNecessaryCoastCrossesTo(dock2);       
-    local ignored_tiles = dock1.GetOccupiedTiles();
-    ignored_tiles.extend(dock2.GetOccupiedTiles());
-    
-    /* No locks needed (in theory). */
-    if(coast_cross.len() == 0) {
-        if(dock1.is_artificial && dock2.is_artificial) {            
-            local canal = this._canal_pathfinder.FindPath(dock1.GetPfTile(), dock2.GetPfTile(), max_len, ignored_tiles);
-            if(canal.len() == 0)
-                this._not_connected_cache.AddItem(dock1.tile << 32 | dock2.tile, 1);
-            return ShipPath(dock1, dock2, canal, [], []);
-        }
-
-        /* GetNecessaryCoastCrossesTo may return empty list, this means the artificial dock is exactly behind us. */
-        if(dock1.is_artificial && !dock2.is_artificial) {
-            local lock = dock2.GetLockNearby();
-            if(lock == -1) {
-                this._not_connected_cache.AddItem(dock1.tile << 32 | dock2.tile, 1);
-                return ShipPath(dock1, dock2);
-            }
-            ignored_tiles.append(GetHillBackTile(lock, 1));
-            local canal = this._canal_pathfinder.FindPath(dock1.GetPfTile(), GetHillBackTile(lock, 2), max_len, ignored_tiles);
-            if(canal.len() == 0)
-                this._not_connected_cache.AddItem(dock1.tile << 32 | dock2.tile, 1);
-            else
-                canal.append(lock);
-            return ShipPath(dock1, dock2, canal, [], []);
-        }
-        
-        if(!dock1.is_artificial && dock2.is_artificial) {
-            local lock = dock1.GetLockNearby();
-            if(lock == -1) {
-                this._not_connected_cache.AddItem(dock1.tile << 32 | dock2.tile, 1);
-                return ShipPath(dock1, dock2);
-            }
-            ignored_tiles.append(GetHillBackTile(lock, 1));
-            local canal = this._canal_pathfinder.FindPath(GetHillBackTile(lock, 2), dock2.GetPfTile(), max_len, ignored_tiles);
-            if(canal.len() == 0)
-                this._not_connected_cache.AddItem(dock1.tile << 32 | dock2.tile, 1);
-            else
-                canal.insert(0, lock);
-            return ShipPath(dock1, dock2, canal, [], []);
-        }
-
-        //AILog.Info("not expected (1):"+dock1.is_artificial+","+dock2.is_artificial);
-        return ShipPath(dock1, dock2);
-    }
-    
-    local lock1_coast = coast_cross[0];
-    local lock2_coast = coast_cross[coast_cross.len()-1];
-    
-    /* One lock needed. */
-    if(lock1_coast == lock2_coast) {
-        local lock = _FindLockPlace(lock1_coast, dock1.tile, dock2.tile);
-        if(lock == -1) {
-            this._not_connected_cache.AddItem(dock1.tile << 32 | dock2.tile, 1);
-            return ShipPath(dock1, dock2);
-        }        
-        ignored_tiles.append(GetHillBackTile(lock, 1));
-        
-        if(dock1.is_artificial && !dock2.is_artificial) {
-            /* Fast things first, find open water path. */
-            local open_water = FindOpenWaterPath(lock, dock2.GetPfTile(dock1.tile), max_len);
-            if(open_water.len() == 0) {
-                this._not_connected_cache.AddItem(dock1.tile << 32 | dock2.tile, 1);
-                return ShipPath(dock1, dock2);
-            }
-            
-            /* Then find canal to reach the lock. */
-            local canal = this._canal_pathfinder.FindPath(dock1.GetPfTile(), GetHillBackTile(lock, 2), max_len - open_water.len(), ignored_tiles);
-            if(canal.len() == 0) {
-                this._not_connected_cache.AddItem(dock1.tile << 32 | dock2.tile, 1);
-                return ShipPath(dock1, dock2);
-            }
-            
-            canal.append(lock);            
-            return ShipPath(dock1, dock2, canal, open_water, []);
-        }
-        
-        if(!dock1.is_artificial && dock2.is_artificial) {
-            /* Fast things first, find open water path. */
-            local open_water = FindOpenWaterPath(dock1.GetPfTile(dock2.tile), lock, max_len);
-            if(open_water.len() == 0) {
-                this._not_connected_cache.AddItem(dock1.tile << 32 | dock2.tile, 1);
-                return ShipPath(dock1, dock2);
-            }
-            
-            /* Then find canal to reach dock2. */
-            local canal = this._canal_pathfinder.FindPath(GetHillBackTile(lock, 2), dock2.GetPfTile(), max_len - open_water.len(), ignored_tiles);                      
-            if(canal.len() == 0) {
-                this._not_connected_cache.AddItem(dock1.tile << 32 | dock2.tile, 1);
-                return ShipPath(dock1, dock2);
-            }
-            
-            canal.insert(0, lock);
-            return ShipPath(dock1, dock2, [], open_water, canal);
-        }
-        
-        //AILog.Info("not expected (2):"+dock1.is_artificial+","+dock2.is_artificial);
-        return ShipPath(dock1, dock2);
-    }
-    
-    /* Two locks needed. */
-    if(dock1.is_artificial && dock2.is_artificial) {
-        local lock1 = _FindLockPlace(lock1_coast, dock1.tile, dock2.tile);
-        if(lock1 == -1) {
-            this._not_connected_cache.AddItem(dock1.tile << 32 | dock2.tile, 1);
-            return ShipPath(dock1, dock2);
-        }        
-            
-        local lock2 = _FindLockPlace(lock2_coast, dock1.tile, dock2.tile);
-        if(lock2 == -1) {
-            this._not_connected_cache.AddItem(dock1.tile << 32 | dock2.tile, 1);
-            return ShipPath(dock1, dock2);
-        }                
-        
-        /* Find sea/lake path between the 2 locks. */
-        local open_water = FindOpenWaterPath(lock1, lock2, max_len);
-        if(open_water.len() == 0) {
-            this._not_connected_cache.AddItem(dock1.tile << 32 | dock2.tile, 1);
-            return ShipPath(dock1, dock2);
-        }
-        
-        /* Find canals to 2 locks. */
-        ignored_tiles.append(GetHillBackTile(lock1, 1));
-        ignored_tiles.append(GetHillBackTile(lock2, 1));
-                
-        local canal1 = this._canal_pathfinder.FindPath(dock1.GetPfTile(), GetHillBackTile(lock1, 2), max_len - open_water.len(), ignored_tiles);                      
-        if(canal1.len() == 0) {
-            this._not_connected_cache.AddItem(dock1.tile << 32 | dock2.tile, 1);
-            return ShipPath(dock1, dock2);
-        }
-        canal1.append(lock1);
-        
-        local canal2 = this._canal_pathfinder.FindPath(GetHillBackTile(lock2, 2), dock2.GetPfTile(), max_len - open_water.len(), ignored_tiles);                      
-        if(canal2.len() == 0) {
-            this._not_connected_cache.AddItem(dock1.tile << 32 | dock2.tile, 1);
-            return ShipPath(dock1, dock2);
-        }
-        canal2.insert(0, lock2);
-        return ShipPath(dock1, dock2, canal1, open_water, canal2);
-    }
-
-    //AILog.Info("not expected (3):"+dock1.is_artificial+","+dock2.is_artificial);
-    return ShipPath(dock1, dock2);
 }
 
 function Water::BuildShip(depot, cargo, round_trip_distance, monthly_production) {    
@@ -358,10 +118,9 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
         return false;
     
     /* No possible water connection. */
-    local path = FindWaterPath(dock1, dock2, this.max_path_len);
-    if(!path.IsValid())
+    if(!pf.FindPath(dock1, dock2, this.max_path_len, 1, areCanalsAllowed))
         return false;
-    
+ 
     /* Build infrastructure. */
     WaitToHaveEnoughMoney(dock1.EstimateCost());
     if(dock1.Build() == -1) {
@@ -382,20 +141,20 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
         AILog.Error("Failed to build dock: " + AIError.GetLastErrorString());
         return false;
     }
-    WaitToHaveEnoughMoney(path.EstimateCanalsCost());
-    if(!path.BuildCanals()) {
+    WaitToHaveEnoughMoney(pf.EstimateCanalsCost());
+    if(!pf.BuildCanals()) {
         AILog.Error("Failed to build the canal for " + dock1.GetName() + "-" + dock2.GetName() + " route: " + AIError.GetLastErrorString());
         return false;
     }
-    local vehicle = BuildShip(depot, cargo, path.Length() * 2, monthly_production);
+    local vehicle = BuildShip(depot, cargo, pf.Length() * 2, monthly_production);
     if(!AIVehicle.IsValidVehicle(vehicle)) {
         AILog.Error("Failed to build ship for " + dock1.GetName() + "-" + dock2.GetName() + " route");
         return false;
     }
     
     /* Build buoys every n tiles. */
-    WaitToHaveEnoughMoney(path.EstimateBuoysCost());
-    local buoys = path.BuildBuoys();
+    WaitToHaveEnoughMoney(pf.EstimateBuoysCost());
+    local buoys = pf.BuildBuoys();
     
     /* Schedule path. */
     local load_order = full_load ? AIOrder.OF_FULL_LOAD : AIOrder.OF_NONE;

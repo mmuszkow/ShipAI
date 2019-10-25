@@ -3,6 +3,8 @@ class CanalPathfinder {
     _aystar = null;
     _dest = -1;
     _max_length = 100;
+
+    path = [];
     
     /* when using bananas, we cannot use '..' in require, so we cannot include global.nut */
     NORTH = AIMap.GetTileIndex(0, -1);
@@ -17,27 +19,27 @@ class CanalPathfinder {
 }
 
 function CanalPathfinder::FindPath(start, end, max_distance, ignored = []) {
+    this.path = [];
     if(start == -1 || end == -1 || start == end || max_distance <= 0)
-        return [];
+        return false;
     
     local dist = AIMap.DistanceManhattan(start, end);
     max_distance = min(max_distance, 50); /* TODO: improve performance instead */
     if(dist == -1 || dist > max_distance)
-        return [];
+        return false;
 
     this._dest = end;
     this._max_length = max_distance;
     this._aystar.InitializePath([[start, this._GetDominantDirection(start, end)]], [end], ignored);
-    local path = this._aystar.FindPath(10000);
-    if(path == false || path == null)
-        return [];
-    local ret = [];
-    while(path != null) {
-        ret.append(path.GetTile());
-        path = path.GetParent();
+    local tmp_path = this._aystar.FindPath(10000);
+    if(tmp_path == false || tmp_path == null)
+        return false;
+    while(tmp_path != null) {
+        this.path.append(tmp_path.GetTile());
+        tmp_path = tmp_path.GetParent();
     }
-    ret.reverse();
-    return ret;
+    this.path.reverse();
+    return true;
 }
 
 function _IsRiverTile(tile) {

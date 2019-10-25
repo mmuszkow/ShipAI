@@ -39,10 +39,6 @@ function CoastPathfinder::_GetNextTile(tile, dir) {
     return -1;
 }
 
-function CoastPathfinder::_IsCoastTile(tile) {
-    return AITile.IsCoastTile(tile) || AIMarine.IsDockTile(tile);
-}
-
 function CoastPathfinder::_IsWaterTile(tile) {
     return  (AITile.IsWaterTile(tile) && AITile.GetMaxHeight(tile) == 0) || /* exclude rivers */
             AIMarine.IsBuoyTile(tile) ||
@@ -103,69 +99,63 @@ function CircularBuffer::add(tile) {
         this.index = 0;
 }
 
-function CoastPathfinder::FindPath(coast1, coast2, max_path_len) {
-    if(coast1 == -1 || coast2 == -1 || coast1 == coast2 || max_path_len <= 0)
+/* Start and end tiles should be adjacent to coast. */
+function CoastPathfinder::FindPath(start, end, max_path_len) {
+    if(start == -1 || end == -1 || start == end || max_path_len <= 0)
         return false;
-    
-    if(!_IsCoastTile(coast1) || !_IsCoastTile(coast2))
+   
+    /* Get coast tile for start water tile. */
+    local adjacent = AITileList();
+    SafeAddRectangle(adjacent, start, 1);
+    adjacent.Valuate(AITile.GetSlope);
+    adjacent.RemoveValue(AITile.SLOPE_FLAT);;
+    adjacent.Valuate(AIMap.DistanceManhattan, start);
+    adjacent.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
+    if(adjacent.IsEmpty())
         return false;
-    
-    /* In case of fail_point use, coast1 tile may be the other dock tile, not the one on the coast. */
-    if(AIMarine.IsDockTile(coast1) && AITile.GetSlope(coast1) == AITile.SLOPE_FLAT) {
-        if(AIMarine.IsDockTile(coast1 + NORTH))
-            coast1 = coast1 + NORTH;
-        else if(AIMarine.IsDockTile(coast1 + SOUTH))
-            coast1 = coast1 + SOUTH;
-        else if(AIMarine.IsDockTile(coast1 + WEST))
-            coast1 = coast1 + WEST;
-        else if(AIMarine.IsDockTile(coast1 + EAST))
-            coast1 = coast1 + EAST;
-    }
-    local start = -1;        
+    local coast = adjacent.Begin();
+ 
     local forward = 0;
-    switch(AITile.GetSlope(coast1)) {
+    switch(AITile.GetSlope(coast)) {
         /* West. */
         case AITile.SLOPE_E:
         case AITile.SLOPE_NE:
-            start = coast1 + WEST;
+            start = coast + WEST;
             forward = 1;
             break;
         /* South. */
         case AITile.SLOPE_N:
         case AITile.SLOPE_NW:
-            start = coast1 + SOUTH;
+            start = coast + SOUTH;
             forward = 2;
             break;
         /* North. */
         case AITile.SLOPE_S:
         case AITile.SLOPE_SE:
-            start = coast1 + NORTH;
+            start = coast + NORTH;
             forward = 0;
             break;
         /* East. */
         case AITile.SLOPE_W:
         case AITile.SLOPE_SW:
-            start = coast1 + EAST;
+            start = coast + EAST;
             forward = 3;
             break;
         case AITile.SLOPE_NWS:
-            start = coast1 + AIMap.GetTileIndex(-1, 1);
+            start = coast + AIMap.GetTileIndex(-1, 1);
             break;
         case AITile.SLOPE_ENW:
-            start = coast1 + AIMap.GetTileIndex(1, 1);
+            start = coast + AIMap.GetTileIndex(1, 1);
             break;
         case AITile.SLOPE_WSE:
-            start = coast1 + AIMap.GetTileIndex(-1, -1);
+            start = coast + AIMap.GetTileIndex(-1, -1);
             break;
         case AITile.SLOPE_SEN:
-            start = coast1 + AIMap.GetTileIndex(1, -1);
+            start = coast + AIMap.GetTileIndex(1, -1);
             break;
     }
     
-    if(start == -1)
-        return false;
-    
-    local initial_dist = AIMap.DistanceManhattan(start, coast2);
+    local initial_dist = AIMap.DistanceManhattan(start, end);
   
     /* First iteration we turn right, second left. */
     local turns = [
@@ -196,22 +186,22 @@ function CoastPathfinder::FindPath(coast1, coast2, max_path_len) {
             /* Short loop detection. */
             if(loop_det.contains(this.next))
                 break;
+            
             loop_det.add(this.next);
             
             /* We looped. */
             if(this.next == start)
                 break;
-        
+            
             /* We reached second dock. */
-            local dist = AIMap.DistanceManhattan(this.next, coast2);
+            local dist = AIMap.DistanceManhattan(this.next, end);
             
             /* This means we would need to get back 100 tiles to reach the destination. */
             if(dist > initial_dist + 100)
                 break;
             
-            if(dist != -1 && dist <= 2) { /* wtf, DistanceManhattan returns -1 sometimes */
+            if(dist != -1 && dist == 0) { /* wtf, DistanceManhattan returns -1 sometimes */
                 succ[iter] = true;
-                //AILog.Info("succ:" + this.next + "," + coast2 + "," + AIMap.DistanceManhattan(this.next, coast2));
                 break;
             }
             
