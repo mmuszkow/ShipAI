@@ -30,11 +30,15 @@ function Ferry::_GetPassengersCargoId() {
     return cargo_list.Begin();
 }
 
-function Ferry::GetTownsThatCanHavePassengerDock() {
+function Ferry::GetTownsThatCanHavePassengerDockOrdered() {
     local towns = AITownList();
     towns.Valuate(AITown.GetPopulation);
     towns.KeepAboveValue(this.min_population);
-    return GetTownsThatCanHaveDock(this._passenger_cargo_id, towns); 
+    
+    local dock_capable = GetTownsThatCanHaveDock(this._passenger_cargo_id, towns);
+    dock_capable.Valuate(AITown.GetPopulation);
+    dock_capable.Sort(AIList.SORT_BY_VALUE, AIList.SORT_DESCENDING);
+    return dock_capable;
 }
 
 function Ferry::BuildFerryRoutes() {
@@ -48,8 +52,8 @@ function Ferry::BuildFerryRoutes() {
     if(min_capacity == -1)
         return 0;
         
-    local towns = GetTownsThatCanHavePassengerDock();
-    
+    local towns = GetTownsThatCanHavePassengerDockOrdered();
+ 
     for(local town_id = towns.Begin(); !towns.IsEnd(); town_id = towns.Next()) {
         
         this._maintenance.PerformIfNeeded();

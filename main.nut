@@ -10,7 +10,7 @@ function ShipAI::Save() { return {}; }
 
 function ShipAI::Start() {
     SetCompanyName();    
-    
+ 
     local freight = Freight();
     local ferry = Ferry();
     
@@ -23,8 +23,21 @@ function ShipAI::Start() {
     
     /* Get max loan. */
     AICompany.SetLoanAmount(AICompany.GetMaxLoanAmount());
-    
-    while(true) {          
+
+    local iter = 0;    
+    while(true) {
+        /* To speed-up the path finding, we search for the more complicated paths rarely. */
+        if(iter % 11 == 5) {
+            freight.max_parts = 2;
+            ferry.max_parts = 2;
+        } else if(iter % 11 == 10) {
+            freight.max_parts = 3;
+            ferry.max_parts = 3;
+        } else {
+            freight.max_parts = 1;
+            ferry.max_parts = 1;
+        }
+      
         /* Build industry-industry & industry-town connections. */
         local new_freights = freight.BuildIndustryFreightRoutes();
         new_freights += freight.BuildTownFreightRoutes();
@@ -45,9 +58,58 @@ function ShipAI::Start() {
         if(new_freights > 0) AILog.Info("New freight routes: " + new_freights);
         if(new_ferries > 0) AILog.Info("New ferry routes: " + new_ferries);
         if(statues_founded > 0) AILog.Info("Statues founded: " + statues_founded);
-        
+
+        /* After first iteration build our HQ, it will boost our eco in one city. */
+        if(iter == 0 && !BuildHQ()) AILog.Error("Failed to build HQ");
+
         this.Sleep(50);
+        iter++;
     }
+}
+
+/* To check if tile can have HQ built on, HQ is 2x2. */
+function _val_CanHaveHQ(tile) {
+    return AITile.IsBuildable(tile) &&
+           AITile.IsBuildable(tile + SOUTH) &&
+           AITile.IsBuildable(tile + WEST) &&
+           AITile.IsBuildable(tile + AIMap.GetTileIndex(1, 1));
+}
+
+function ShipAI::BuildHQ() {
+    /* Get towns we have presence in (we have already built a port). */
+    local towns = AITownList();
+    towns.Valuate(AITown.GetRating, AICompany.COMPANY_SELF);
+    towns.RemoveValue(AITown.TOWN_RATING_NONE);
+    towns.Valuate(AITown.GetPopulation);
+    towns.Sort(AIList.SORT_BY_VALUE, AIList.SORT_DESCENDING);
+
+    for(local town = towns.Begin(); !towns.IsEnd(); town = towns.Next()) {
+        /* Get our dock location in the biggest city. */
+        local stations = AIStationList(AIStation.STATION_DOCK);
+        stations.Valuate(AIStation.IsWithinTownInfluence, town);
+        if(stations.IsEmpty())
+            continue;
+        local station = stations.Begin();
+        local dock = AIStation.GetLocation(station);
+
+        /* Get tiles around our dock sorted by distance from dock. */
+        local location = AITileList();
+        SafeAddRectangle(location, dock, 10);
+        location.Valuate(_val_CanHaveHQ);
+        location.KeepValue(1);
+        if(location.IsEmpty())
+            continue;
+        location.Valuate(AITile.GetDistanceSquareToTile, dock);
+        location.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
+       
+        /* Rename the dock. */ 
+        if(AICompany.BuildCompanyHQ(location.Begin())) {
+            AIStation.SetName(station, "ShipAI Headquarters");
+            return true;
+        }
+    }
+
+    return false;
 }
  
 function ShipAI::SetCompanyName() {

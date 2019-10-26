@@ -16,6 +16,8 @@ class Water {
     max_path_len = 400;
     /* Max dock distance from the city center. */
     max_city_dock_distance = 20;
+    /* Max path parts. */
+    max_parts = 1;
 
     /* Maintenance helper. */
     _maintenance = null;
@@ -136,9 +138,30 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
     local dist = AIMap.DistanceManhattan(dock1.tile, dock2.tile);
     if(dist < this.min_distance || dist > this.max_distance)
         return false;
-    
+   
+    /* If we already have a vehicle serving this route, we just clone it. */ 
+    local depot = dock1.FindWaterDepot();
+    if(depot != -1) {
+        local existing_vehicle = FindVehicleServingRoute(dock1, dock2, depot, cargo);
+        if(existing_vehicle != -1) {
+            local vehicle = AIVehicle.CloneVehicle(depot, existing_vehicle, true);
+            if(vehicle == -1) {
+                AILog.Error("Failed to clone ship: " + AIError.GetLastErrorString());
+                return false;
+            }    
+ 
+            if(!AIVehicle.StartStopVehicle(vehicle)) {
+                AILog.Error("Failed to start the ship: " + AIError.GetLastErrorString());
+                AIVehicle.SellVehicle(vehicle);
+                return false;
+            }
+
+            return true;
+        }
+    } 
+
     /* No possible water connection. */
-    if(!pf.FindPath(dock1, dock2, this.max_path_len, 1, areCanalsAllowed))
+    if(!pf.FindPath(dock1, dock2, this.max_path_len, this.max_parts, areCanalsAllowed))
         return false;
  
     /* Build infrastructure. */
@@ -147,7 +170,6 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
         AILog.Error("Failed to build dock: " + AIError.GetLastErrorString());
         return false;
     }
-    local depot = dock1.FindWaterDepot();
     if(depot == -1) {
         WaitToHaveEnoughMoney(AIMarine.GetBuildCost(AIMarine.BT_DEPOT));
         depot = dock1.BuildWaterDepot();
@@ -171,25 +193,7 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
         AILog.Error("Failed to build ship for " + dock1.GetName() + "-" + dock2.GetName() + " route");
         return false;
     }
-
-    /* Share orders if possible */
-    local shared_orders_vehicle = FindVehicleServingRoute(dock1, dock2, depot, cargo);
-    if(shared_orders_vehicle != -1) {
-        if(!AIOrder.ShareOrders(vehicle, shared_orders_vehicle)) {
-            AILog.Error("Failed to share orders for the ship: " + AIError.GetLastErrorString());
-            AIVehicle.SellVehicle(vehicle);
-            return false;
-        }        
  
-        if(!AIVehicle.StartStopVehicle(vehicle)) {
-            AILog.Error("Failed to start the ship: " + AIError.GetLastErrorString());
-            AIVehicle.SellVehicle(vehicle);
-            return false;
-        }
-
-        return true;
-    }
-
     /* Build buoys every n tiles. */
     WaitToHaveEnoughMoney(pf.EstimateBuoysCost());
     local buoys = pf.BuildBuoys();
