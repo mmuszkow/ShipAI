@@ -150,7 +150,7 @@ function Industry::GetPossiblePorts() {
 }
 
 /* Checks all 4 sides of the industry, returns true if any port location is found. */
-function Industry::CanHavePort() {
+function Industry::CanHaveLandPort() {
     for(local orientation = 0; orientation <= 3; orientation++)
         if(GetPossiblePortTile(orientation) != -1)
             return true;
@@ -160,7 +160,7 @@ function Industry::CanHavePort() {
 function Industry::CanHaveDock() {
     return   AIIndustry.HasDock(this.id) || 
             !GetNearbyCoastTiles().IsEmpty() ||
-            (areCanalsAllowed && CanHavePort());
+            (AreCanalsAllowed() && CanHaveLandPort());
 }
 
 /* Valuator. */

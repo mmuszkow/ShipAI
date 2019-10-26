@@ -40,8 +40,6 @@ function Freight::BuildTownFreightRoutes() {
     if(!AreShipsAllowed())
         return ships_built;
     
-    SetCanalsAllowedFlag();
-
     local cargos = AICargoList();
     cargos.Valuate(AICargo.IsFreight); 
     cargos.KeepValue(1); /* Only freight cargo. */
@@ -95,7 +93,7 @@ function Freight::BuildTownFreightRoutes() {
             /* No coast, let's check artificial ports locations. */
             local producer_artificial_ports = [];
             if(dock1 == null) {
-                if(areCanalsAllowed) {
+                if(AreCanalsAllowed()) {
                     producer_artificial_ports = producer.GetPossiblePorts();
                     if(producer_artificial_ports.len() == 0) {
                         AILog.Warning(producer.GetName() + " no longer can have the dock built nearby");
@@ -160,8 +158,6 @@ function Freight::BuildIndustryFreightRoutes() {
     if(!AreShipsAllowed())
         return ships_built;
     
-    SetCanalsAllowedFlag();
-
     local cargos = AICargoList();
     cargos.Valuate(AICargo.IsFreight); 
     cargos.KeepValue(1); /* Only freight cargo. */
@@ -206,7 +202,7 @@ function Freight::BuildIndustryFreightRoutes() {
             /* No coast, let's check artificial ports locations. */
             local producer_artificial_ports = [];
             if(dock1 == null) {
-                if(areCanalsAllowed) {
+                if(AreCanalsAllowed()) {
                     producer_artificial_ports = producer.GetPossiblePorts();
                     if(producer_artificial_ports.len() == 0) {
                         AILog.Warning(producer.GetName() + " no longer can have the dock built nearby");
@@ -264,7 +260,7 @@ function Freight::BuildIndustryFreightRoutes() {
                 
                 /* Let's get more info about the ending dock. */
                 if(dock2 == null) {
-                    if(areCanalsAllowed) {
+                    if(AreCanalsAllowed()) {
                         local acceptor_artificial_ports = acceptor.GetPossiblePorts();
                         if(acceptor_artificial_ports.len() == 0) {
                             AILog.Warning(acceptor.GetName() + " no longer can have the dock built nearby");

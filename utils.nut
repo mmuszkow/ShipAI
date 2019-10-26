@@ -1,3 +1,12 @@
+
+/* If canals are allowed in settings and we have enough money. */
+function AreCanalsAllowed() {
+    return AIController.GetSetting("build_canals") && 
+          (AICompany.GetBankBalance(AICompany.COMPANY_SELF) -
+           AICompany.GetQuarterlyExpenses(AICompany.COMPANY_SELF, AICompany.CURRENT_QUARTER)
+           > 2 * AICompany.GetMaxLoanAmount());
+}
+
 /* AITileList.AddRectangle with map size constraints. */
 function SafeAddRectangle(list, tile, range) {
     local tile_x = AIMap.GetTileX(tile);

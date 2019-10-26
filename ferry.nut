@@ -46,8 +46,6 @@ function Ferry::BuildFerryRoutes() {
     if(!this.AreFerriesAllowed())
         return 0;
     
-    SetCanalsAllowedFlag();
-    
     local min_capacity = ship_model.GetMinCapacityForCargo(this._passenger_cargo_id);
     if(min_capacity == -1)
         return 0;
@@ -82,12 +80,6 @@ function Ferry::BuildFerryRoutes() {
         for(local town2_id = towns2.Begin(); !towns2.IsEnd(); town2_id = towns2.Next()) {
             local town2 = Town(town2_id);
             local dock2 = town2.GetExistingDock(this._passenger_cargo_id);
-            
-            /* If there is already a dock in the city and there 
-               are not many passengers waiting there, there is no point
-               in opening a new route. */
-            if(dock2 != null && AIStation.GetCargoWaiting(AIStation.GetStationID(dock2.tile), this._passenger_cargo_id) < 2 * min_capacity)
-                continue;
             
             if(dock1 == null) {
                 local coast1 = town.GetBestCargoAcceptingCoastTile(this.max_city_dock_distance, this._passenger_cargo_id);

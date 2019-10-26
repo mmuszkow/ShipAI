@@ -1,15 +1,5 @@
 require("ship_model.nut");
 
-/* This is global to save checking cost in every valuate call. */
-areCanalsAllowed <- false;
-
-function SetCanalsAllowedFlag() {    
-    areCanalsAllowed =  AIController.GetSetting("build_canals") && 
-                        (AICompany.GetBankBalance(AICompany.COMPANY_SELF) -
-                         AICompany.GetQuarterlyExpenses(AICompany.COMPANY_SELF, AICompany.CURRENT_QUARTER)
-                         > 2 * AICompany.GetMaxLoanAmount());
-}
-
 /* This is global to have single vehicle capacity cache. */
 ship_model <- ShipModel();
 

@@ -144,6 +144,11 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
     if(depot != -1) {
         local existing_vehicle = FindVehicleServingRoute(dock1, dock2, depot, cargo);
         if(existing_vehicle != -1) {
+            /* If the existing vehicle brings only losses it means that route is not worth it. */
+            if(AIVehicle.GetProfitThisYear(existing_vehicle) < 0
+            && AIVehicle.GetProfitLastYear(existing_vehicle) < 0)
+                return false;
+
             local vehicle = AIVehicle.CloneVehicle(depot, existing_vehicle, true);
             if(vehicle == -1) {
                 AILog.Error("Failed to clone ship: " + AIError.GetLastErrorString());
@@ -161,7 +166,7 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
     } 
 
     /* No possible water connection. */
-    if(!pf.FindPath(dock1, dock2, this.max_path_len, this.max_parts, areCanalsAllowed))
+    if(!pf.FindPath(dock1, dock2, this.max_path_len, this.max_parts, true))
         return false;
  
     /* Build infrastructure. */
