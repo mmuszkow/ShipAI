@@ -79,8 +79,12 @@ function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts, use_ca
     local ignored = [];
     if(dock1.is_landdock)
         ignored.extend(dock1.GetOccupiedTiles());
+    else if(!dock1.is_offshore)
+        ignored.push(GetHillBackTile(dock1.tile, 1));
     if(dock2.is_landdock)
         ignored.extend(dock2.GetOccupiedTiles());
+    else if(!dock2.is_offshore)
+        ignored.push(GetHillBackTile(dock2.tile, 1));
 
     /* Try to avoid obstacles */
     for(local i=1; i<straight_paths.len(); i++) {

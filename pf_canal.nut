@@ -1,4 +1,3 @@
-require("lock.nut");
 require("utils.nut");
 
 class CanalPathfinder {
@@ -15,9 +14,19 @@ class CanalPathfinder {
     }
 }
 
-function CanalPathfinder::_FindAdjacentLockTile(tile, direction) {
+function _val_IsLockCapableCoast(tile) {
+    if(!AITile.IsCoastTile(tile) || !IsSimpleSlope(tile))
+        return false;
+    if(AIMarine.IsLockTile(tile))
+        return true;
+    return  AITile.IsWaterTile(GetHillFrontTile(tile, 1)) &&
+            AITile.IsBuildable(GetHillBackTile(tile, 1));
+}
+
+/* Finds a lock/possible lock tile next to the water tile. */
+function CanalPathfinder::_FindAdjacentLockTile(water, direction) {
     local tiles = AITileList();
-    SafeAddRectangle(tiles, tile, 1);
+    SafeAddRectangle(tiles, water, 1);
     tiles.Valuate(_val_IsLockCapable);
     tiles.KeepValue(1);
     tiles.Valuate(AIMap.DistanceManhattan, direction);
@@ -26,6 +35,25 @@ function CanalPathfinder::_FindAdjacentLockTile(tile, direction) {
         return -1;
 
     return tiles.Begin();
+}
+
+function CanalPathfinder::_LockGetExitSideTiles(lock) {
+    switch(AITile.GetSlope(lock)) {
+        case AITile.SLOPE_NE:
+            /* West */
+            return [lock + AIMap.GetTileIndex(-1, -1), lock + AIMap.GetTileIndex(-1, 1)];
+        case AITile.SLOPE_NW:
+            /* South. */
+            return [lock + AIMap.GetTileIndex(-1, -1), lock + AIMap.GetTileIndex(1, -1)];
+        case AITile.SLOPE_SE:
+            /* North. */
+            return [lock + AIMap.GetTileIndex(-1, 1), lock + AIMap.GetTileIndex(1, 1)];
+        case AITile.SLOPE_SW:
+            /* East. */
+            return [lock + AIMap.GetTileIndex(1, -1), lock + AIMap.GetTileIndex(1, 1)];
+        default:
+            return [];
+    }
 }
 
 function CanalPathfinder::FindPath(start, end, max_distance, ignored = []) {
@@ -40,10 +68,18 @@ function CanalPathfinder::FindPath(start, end, max_distance, ignored = []) {
 
     /* We operate on land only, so if any of the points is on water we need to 
      * find adjacent tile capable of hosting a lock */
-    if(AITile.IsWaterTile(start) && (AITile.GetMaxHeight(start) == 0))
+    if(AITile.IsWaterTile(start) && (AITile.GetMaxHeight(start) == 0)) {
         start = _FindAdjacentLockTile(start, end);
-    if(AITile.IsWaterTile(end) && (AITile.GetMaxHeight(end) == 0))
+        /* Locks cannot be entered from sides. */
+        if(start != -1)
+            ignored.extend(_LockGetExitSideTiles(start));
+    }
+    if(AITile.IsWaterTile(end) && (AITile.GetMaxHeight(end) == 0)) {
         end = _FindAdjacentLockTile(end, start);
+        /* Locks cannot be entered from sides. */
+        if(end != -1)
+            ignored.extend(_LockGetExitSideTiles(end));
+    }
     if(start == -1 || end == -1)
         return false;
 
@@ -58,6 +94,7 @@ function CanalPathfinder::FindPath(start, end, max_distance, ignored = []) {
         tmp_path = tmp_path.GetParent();
     }
     this.path.reverse();
+
     return true;
 }
 
@@ -93,9 +130,10 @@ function CanalPathfinder::_Neighbours(self, path, cur_node) {
     foreach(tile in offsets) {        
         if(AITile.GetSlope(tile) != AITile.SLOPE_FLAT)
             continue;
-        if( AITile.IsBuildable(tile) || AIMarine.IsCanalTile(tile) ||
+        if((AITile.IsBuildable(tile) || AIMarine.IsCanalTile(tile) ||
             AIMarine.IsLockTile(tile) || AIMarine.IsBuoyTile(tile) || 
             (AITile.IsWaterTile(tile) && (AITile.GetMaxHeight(tile) > 0)))
+            && !AIMarine.IsWaterDepotTile(tile))
             tiles.append([tile, self._GetDirection(cur_node, tile)]);
     }
 

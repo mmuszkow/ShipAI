@@ -41,38 +41,38 @@ function Maintenance::SellUnprofitable() {
     /* Find unprofitable. */
     unprofitable = AIVehicleList_DefaultGroup(AIVehicle.VT_WATER);
     unprofitable.Valuate(AIVehicle.GetProfitLastYear);
-    unprofitable.KeepBelowValue(0);
+    unprofitable.KeepBelowValue(100); /* Less than 100 cash */
     unprofitable.Valuate(AIVehicle.GetProfitThisYear);
-    unprofitable.KeepBelowValue(0);
+    unprofitable.KeepBelowValue(100);
     unprofitable.Valuate(AIVehicle.GetAge);
     unprofitable.KeepAboveValue(1095); /* 3 years old minimum */
     unprofitable.Valuate(AIVehicle.IsValidVehicle);
     unprofitable.KeepValue(1);
     for(local vehicle = unprofitable.Begin(); !unprofitable.IsEnd(); vehicle = unprofitable.Next()) {
-        
-        /* Manually guide the ship to his depot so it doesn't get lost. */
-        if(AIOrder.IsGotoDepotOrder(vehicle, 0)) {
-            local depot = AIOrder.GetOrderDestination(vehicle, 0);
-            /* UnshareOrders remove all orders from the list, we need to make a copy of the buoys location before. */
-            local buoys = [];
-            local ord_count = AIOrder.GetOrderCount(vehicle);
-            for(local ord_pos = AIOrder.ResolveOrderPosition(vehicle, AIOrder.ORDER_CURRENT); ord_pos < ord_count; ord_pos++) {
-                if(AIOrder.IsGotoWaypointOrder(vehicle, ord_pos))
-                    buoys.append(AIOrder.GetOrderDestination(vehicle, ord_pos));
-            }
-           
-            AIOrder.UnshareOrders(vehicle);
-            foreach(buoy in buoys)
-                AIOrder.AppendOrder(vehicle, buoy, AIOrder.OF_NONE);
+       
+        /* We can't use AIVehicle.SendToDepot here because it chooses the closest depot,
+         * not always the one on our route. */
+        local current_order = AIOrder.ResolveOrderPosition(vehicle, AIOrder.ORDER_CURRENT);
+        local order_count = AIOrder.GetOrderCount(vehicle);
+        local depot = AIOrder.GetOrderDestination(vehicle, 0);
+        local buoys = []; 
 
-            /* Make a final stop in depot. */
-            AIOrder.AppendOrder(vehicle, depot, AIOrder.OF_STOP_IN_DEPOT);
-                
+        /* Depending on where we are on our route, we either go back or continue going. */
+        if(current_order < order_count / 2) {
+            for(local order = 1; order < current_order; order++)
+                buoys.append(AIOrder.GetOrderDestination(vehicle, order));
+            buoys.reverse();
         } else {
-            AILog.Error("Failed to send ship for selling, first order is not a go to depot order");
-            continue;
+            for(local order = current_order; order < order_count; order++)
+                buoys.append(AIOrder.GetOrderDestination(vehicle, order));
         }
-        
+
+        /* We can be sharing orders with other ships, so we need to clean previous ones. */
+        AIOrder.UnshareOrders(vehicle);
+        foreach(buoy in buoys)
+            AIOrder.AppendOrder(vehicle, buoy, AIOrder.OF_NONE);
+        AIOrder.AppendOrder(vehicle, depot, AIOrder.OF_STOP_IN_DEPOT);
+
         /* We remove them from default group to avoid looping. */
         AIGroup.MoveVehicle(this._sell_group, vehicle);
     }
@@ -124,11 +124,11 @@ function Maintenance::Upgrade() {
             /* We need to send the vehicle to depot to be replaced but we should do this only when the vehicle is close to the depot (1st or last order). */
             local last_order = AIOrder.GetOrderCount(vehicle) - 1;
             local current_order = AIOrder.ResolveOrderPosition(vehicle, AIOrder.ORDER_CURRENT);
-            if((current_order >= 0 && current_order <= 1) || current_order == last_order) {
+            if(current_order == 0 || current_order == 1 || current_order == last_order) {
                 if(!AIOrder.IsGotoDepotOrder(vehicle, AIOrder.ORDER_CURRENT)) {
-                    if(AIVehicle.SendVehicleToDepotForServicing(vehicle)) {
+                    if(AIVehicle.SendVehicleToDepotForServicing(vehicle))
                         sent_to_upgrade++;
-                    } else
+                    else
                         AILog.Error("Failed to send the vehicle for servicing: " + AIError.GetLastErrorString());
                 }
             }
@@ -151,7 +151,7 @@ function Maintenance::Perform() {
 
 /* This is performed once per year. */
 function Maintenance::PerformIfNeeded() {
-    if(AIDate.GetCurrentDate() - this._maintenance_last_performed < 365)
+    if(AIDate.GetCurrentDate() - this._maintenance_last_performed < 180)
         return;
     
     Perform();
