@@ -166,7 +166,7 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
     } 
 
     /* No possible water connection. */
-    if(!pf.FindPath(dock1, dock2, this.max_path_len, this.max_parts, true))
+    if(!pf.FindPath(dock1, dock2, this.max_path_len, this.max_parts))
         return false;
  
     /* Build infrastructure. */

@@ -26,7 +26,7 @@ function WaterPathfinder::_IsWater(tile) {
             AIMarine.IsWaterDepotTile(tile);
 }
 
-function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts, use_canals) {
+function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts) {
     this.paths = [];
     this.is_canal = [];
     local start = dock1.GetPfTile(dock2.tile);
@@ -75,6 +75,11 @@ function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts, use_ca
         if(e2 < dy) { err += dx; y0 += sy; }
     }
 
+    /* If the docks are on land and we cannot build canals there is nothing we can do. */
+    local use_canals = AreCanalsAllowed();
+    if(!use_canals && (dock1.is_landdock || dock2.is_landdock))
+        return false;
+
     /* For the landdocks we need to avoid going over tiles where the dock will be placed */
     local ignored = [];
     if(dock1.is_landdock)
@@ -101,9 +106,7 @@ function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts, use_ca
             len_so_far += coast_pf.path.len();
         } else {
             /* No coast path, let's try planning a canal */
-            if(!use_canals)
-                return false;
-            if(canal_pf.FindPath(obs_start, obs_end, max_obs_len, ignored)) {
+            if(use_canals && canal_pf.FindPath(obs_start, obs_end, max_obs_len, ignored)) {
                 /* We found a suitable canal */
                 this.paths.push(canal_pf.path);
                 this.is_canal.push(true);
@@ -187,15 +190,11 @@ function WaterPathfinder::BuildCanals() {
                     continue;
                 
                 if(IsSimpleSlope(tile)) {
-                    if(!AIMarine.BuildLock(tile)) {
-                        AISign.BuildSign(tile, "L");
+                    if(!AIMarine.BuildLock(tile))
                         return false;
-                    }
                 } else {
-                    if(!AIMarine.BuildCanal(tile)) {
-                        AISign.BuildSign(tile, "C");
+                    if(!AIMarine.BuildCanal(tile))
                         return false;
-                    }
                 }
             }
         }
