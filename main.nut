@@ -41,9 +41,11 @@ function ShipAI::Start() {
         /* Build industry-industry & industry-town connections. */
         local new_freights = freight.BuildIndustryFreightRoutes();
         new_freights += freight.BuildTownFreightRoutes();
+        freight.maintenance.PerformIfNeeded();
         
         /* Build town-town connections. */
         local new_ferries = ferry.BuildFerryRoutes();
+        ferry.maintenance.PerformIfNeeded();
 
         /* Return the loan if we have the money. */
         if( AICompany.GetBankBalance(AICompany.COMPANY_SELF) - 
@@ -53,11 +55,15 @@ function ShipAI::Start() {
         
         /* Build statues if we have a lot of money left, they increase the stations ratings. */
         local statues_founded = BuildStatuesIfRich();
-        
+       
+        /* Same with trees. */
+        local trees_planted = (statues_founded > 0) ? 0 : PlantTreesIfRich();
+ 
         /* Print summary/ */
         if(new_freights > 0) AILog.Info("New freight routes: " + new_freights);
         if(new_ferries > 0) AILog.Info("New ferry routes: " + new_ferries);
         if(statues_founded > 0) AILog.Info("Statues founded: " + statues_founded);
+        if(trees_planted > 0) AILog.Info("Trees planted: " + trees_planted);
 
         /* After first iteration build our HQ, it will boost our eco in one city. */
         if(iter == 0 && !BuildHQ()) AILog.Error("Failed to build HQ");
@@ -133,6 +139,39 @@ function ShipAI::WeAreRich() {
            10 * AICompany.GetMaxLoanAmount();
 }
 
+function ShipAI::PlantTreesIfRich() {
+    local planted = 0;
+    if(!WeAreRich())
+        return planted;
+
+    local towns = AITownList();
+    towns.Valuate(AITown.GetRating, AICompany.COMPANY_SELF);
+	towns.KeepBelowValue(AITown.TOWN_RATING_GOOD);
+	towns.RemoveValue(AITown.TOWN_RATING_NONE);
+	towns.RemoveValue(AITown.TOWN_RATING_INVALID);    
+    towns.Valuate(AITown.GetPopulation);
+    towns.Sort(AIList.SORT_BY_VALUE, AIList.SORT_DESCENDING);
+
+    local start = AIDate.GetCurrentDate();
+    
+    for(local town_id = towns.Begin(); !towns.IsEnd(); town_id = towns.Next()) {
+        /* We plant trees for 3 months max */
+        if(AIDate.GetCurrentDate() - start > 90)
+            return founded;        
+        
+        local area = Town(town_id).GetArea();
+        area.Valuate(AITile.IsBuildable);
+        area.KeepValue(1);
+        area.Valuate(AIBase.RandItem);
+        for(local tile = area.Begin(); !area.IsEnd(); tile = area.Next()) {
+            if(AITile.PlantTree(tile))
+                planted++;
+        }
+    }
+
+    return planted;
+}
+
 /* Build statues in the cities we have any station. */
 function ShipAI::BuildStatuesIfRich() {
     local founded = 0;
@@ -147,10 +186,11 @@ function ShipAI::BuildStatuesIfRich() {
     towns.KeepValue(0);
     towns.Valuate(AITown.IsActionAvailable, AITown.TOWN_ACTION_BUILD_STATUE);
     towns.KeepValue(1);
-    
+
     for(local town = towns.Begin(); !towns.IsEnd(); town = towns.Next()) {
         if(!WeAreRich())
             return founded;
+
         if(AITown.PerformTownAction(town, AITown.TOWN_ACTION_BUILD_STATUE)) {
             AILog.Info("Building statue in " + AITown.GetName(town));
             founded++;

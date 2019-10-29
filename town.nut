@@ -59,3 +59,25 @@ function Town::GetExistingDock(cargo) {
 function Town::GetMonthlyProduction(cargo) {
     return (((100 - AITown.GetLastMonthTransportedPercentage(this.id, cargo))/100.0) * AITown.GetLastMonthProduction(this.id, cargo)).tointeger();
 }
+
+function Town::GetArea() {
+    local center = AITown.GetLocation(this.id);
+
+    /* Determine borders. */
+    local area_w = 5;
+    while( AITile.IsWithinTownInfluence(center + area_w, this.id)
+        || AITile.IsWithinTownInfluence(center - area_w, this.id))
+        area_w += 5;
+    local area_h = 5;
+    while( AITile.IsWithinTownInfluence(center + area_h, this.id)
+        || AITile.IsWithinTownInfluence(center - area_h, this.id))
+        area_h += 5;
+
+    /* Return tiles list. */
+    local area = AITileList();
+    SafeAddRectangle(area, center, area_w, area_h);
+    area.Valuate(AITile.IsWithinTownInfluence, this.id);
+    area.KeepValue(1);
+    return area;
+}
+

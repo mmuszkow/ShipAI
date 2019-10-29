@@ -8,13 +8,15 @@ function AreCanalsAllowed() {
 }
 
 /* AITileList.AddRectangle with map size constraints. */
-function SafeAddRectangle(list, tile, range) {
+function SafeAddRectangle(list, tile, range_x, range_y = -1) {
+    if(range_y == -1)
+        range_y = range_x;
     local tile_x = AIMap.GetTileX(tile);
     local tile_y = AIMap.GetTileY(tile);
-    local x1 = max(1, tile_x - range);
-    local y1 = max(1, tile_y - range);
-    local x2 = min(AIMap.GetMapSizeX() - 2, tile_x + range);
-    local y2 = min(AIMap.GetMapSizeY() - 2, tile_y + range);
+    local x1 = max(1, tile_x - range_x);
+    local y1 = max(1, tile_y - range_y);
+    local x2 = min(AIMap.GetMapSizeX() - 2, tile_x + range_x);
+    local y2 = min(AIMap.GetMapSizeY() - 2, tile_y + range_y);
     list.AddRectangle(AIMap.GetTileIndex(x1, y1), AIMap.GetTileIndex(x2, y2)); 
 }
 

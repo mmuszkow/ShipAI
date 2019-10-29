@@ -20,7 +20,7 @@ class Water {
     max_parts = 1;
 
     /* Maintenance helper. */
-    _maintenance = null;
+    maintenance = null;
     /* Cache for points that are not connected. */
     _not_connected_cache = AIList();
     
@@ -28,7 +28,7 @@ class Water {
     pf = WaterPathfinder();
     
     constructor() {
-        _maintenance = Maintenance();
+        maintenance = Maintenance();
     }
 }
 

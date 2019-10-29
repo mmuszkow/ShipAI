@@ -54,7 +54,7 @@ function Ferry::BuildFerryRoutes() {
  
     for(local town_id = towns.Begin(); !towns.IsEnd(); town_id = towns.Next()) {
         
-        this._maintenance.PerformIfNeeded();
+        this.maintenance.PerformIfNeeded();
         
         local town = Town(town_id);
         local dock1 = town.GetExistingDock(this._passenger_cargo_id);
@@ -110,7 +110,5 @@ function Ferry::BuildFerryRoutes() {
         }
     }
             
-    this._maintenance.Perform();
-    
     return ferries_built;
 }

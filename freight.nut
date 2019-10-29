@@ -60,7 +60,7 @@ function Freight::BuildTownFreightRoutes() {
         
         for(local producer_id = producers.Begin(); !producers.IsEnd(); producer_id = producers.Next()) {
             
-            this._maintenance.PerformIfNeeded();
+            this.maintenance.PerformIfNeeded();
             
             /* Industry may cease to exist. */
             if(!AIIndustry.IsValidIndustry(producer_id))
@@ -148,8 +148,6 @@ function Freight::BuildTownFreightRoutes() {
         }
     }
     
-    this._maintenance.Perform();
-    
     return ships_built;
 }
 
@@ -178,7 +176,7 @@ function Freight::BuildIndustryFreightRoutes() {
         
         for(local producer_id = producers.Begin(); !producers.IsEnd(); producer_id = producers.Next()) {
             
-            this._maintenance.PerformIfNeeded();
+            this.maintenance.PerformIfNeeded();
             
             /* Industry may cease to exist. */
             if(!AIIndustry.IsValidIndustry(producer_id))
@@ -290,8 +288,6 @@ function Freight::BuildIndustryFreightRoutes() {
             }
         }
     }
-    
-    this._maintenance.Perform();
     
     return ships_built;
 }
