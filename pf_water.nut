@@ -9,6 +9,7 @@ class WaterPathfinder {
      */
     paths = [];
     is_canal = [];
+    has_canal = false;
 
     coast_pf = CoastPathfinder();
     canal_pf = CanalPathfinder();
@@ -29,6 +30,7 @@ function WaterPathfinder::_IsWater(tile) {
 function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts) {
     this.paths = [];
     this.is_canal = [];
+    this.has_canal = false;
     local start = dock1.GetPfTile(dock2.tile);
     local end = dock2.GetPfTile(dock1.tile);
     if(!AIMap.IsValidTile(start) || !AIMap.IsValidTile(end)
@@ -111,6 +113,7 @@ function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts) {
                 /* We found a suitable canal */
                 this.paths.push(canal_pf.path);
                 this.is_canal.push(true);
+                this.has_canal = true;
                 len_so_far += canal_pf.path.len();
             } else
                 return false;
@@ -172,15 +175,32 @@ function WaterPathfinder::BuildBuoys() {
 }
 
 function WaterPathfinder::EstimateCanalsCost() {
-    /* TODO */
+    /* This method may be costful but there is no BT_CANAL or BT_LOCK for AIMarine.GetBuildCosts. */
+    if(!this.has_canal)
+        return 0;
     local test = AITestMode();
     local costs = AIAccounting();
     this.BuildCanals();
     return costs.GetCosts();
-    //return (this.canal1.len() + this.canal2.len()) * 1000 + 7000;
+
+    //local canal_cost = 8 * AIMarine.GetBuildCost(AIMarine.BT_DEPOT);
+    //local lock_cost = 11 * AIMarine.GetBuildCost(AIMarine.BT_DEPOT);
+    //local cost = 0;
+    //local i = 0;
+    //foreach(path in this.paths) {
+        //if(this.is_canal[i]) {
+            //cost += 2 * lock_cost;
+            //cost += (path.len() - 2) * canal_cost;
+        //}
+        //i++;
+    //}
+    //return cost;
 }
 
 function WaterPathfinder::BuildCanals() {
+    if(!this.has_canal)
+        return true;
+
     local i = 0;
     foreach(path in this.paths) {
         if(this.is_canal[i]) {
