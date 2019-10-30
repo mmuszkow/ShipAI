@@ -83,11 +83,13 @@ function Water::BuildShip(depot, cargo, round_trip_distance, monthly_production)
         return -1;
     }
 
-    WaitToHaveEnoughMoney(AIEngine.GetPrice(engine));
-    if(!AIEngine.IsValidEngine(engine)) {
+    /* Get price. */
+    local vehicle_price = AIEngine.GetPrice(engine);
+    if(!AIEngine.IsValidEngine(engine) || vehicle_price < 0) {
         AILog.Error("The chosen vehicle model is no longer produced");
         return -1;
     }
+    WaitToHaveEnoughMoney(vehicle_price);
         
     local vehicle = AIVehicle.BuildVehicle(depot, engine);
     local last_err = AIError.GetLastErrorString();
@@ -112,11 +114,11 @@ function Water::BuildShip(depot, cargo, round_trip_distance, monthly_production)
 
 function Water::FindVehicleServingRoute(dock1, dock2, depot, cargo) {
     local station1 = AIStation.GetStationID(dock1.tile);
-    if(station1 == -1)
+    if(!AIStation.IsValidStation(station1))
         return -1;
 
     local station2 = AIStation.GetStationID(dock2.tile);
-    if(station2 == -1)
+    if(!AIStation.IsValidStation(station2))
         return -1;
 
     local vehicles = AIVehicleList_Station(station1);
@@ -150,7 +152,7 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
                 return false;
 
             local vehicle = AIVehicle.CloneVehicle(depot, existing_vehicle, true);
-            if(vehicle == -1) {
+            if(!AIVehicle.IsValidVehicle(vehicle)) {
                 AILog.Error("Failed to clone ship: " + AIError.GetLastErrorString());
                 return false;
             }    

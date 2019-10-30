@@ -97,7 +97,8 @@ function CircularBuffer::add(tile) {
 
 /* Start and end tiles should be adjacent to coast. */
 function CoastPathfinder::FindPath(start, end, max_path_len) {
-    if(start == -1 || end == -1 || start == end || max_path_len <= 0)
+    if(!AIMap.IsValidTile(start) || !AIMap.IsValidTile(end) 
+        || start == end || max_path_len <= 0)
         return false;
    
     /* Get coast tile for start water tile. */

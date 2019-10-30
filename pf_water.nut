@@ -31,7 +31,8 @@ function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts) {
     this.is_canal = [];
     local start = dock1.GetPfTile(dock2.tile);
     local end = dock2.GetPfTile(dock1.tile);
-    if(start == -1 || end == -1 || start == end || max_path_len <= 0)
+    if(!AIMap.IsValidTile(start) || !AIMap.IsValidTile(end)
+        || start == end || max_path_len <= 0)
         return false;
 
     if(AIMap.DistanceManhattan(start, end) > max_path_len)

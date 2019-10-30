@@ -58,7 +58,8 @@ function CanalPathfinder::_LockGetExitSideTiles(lock) {
 
 function CanalPathfinder::FindPath(start, end, max_distance, ignored = []) {
     this.path = [];
-    if(start == -1 || end == -1 || start == end || max_distance <= 0)
+    if(!AIMap.IsValidTile(start) || !AIMap.IsValidTile(end) 
+        || start == end || max_distance <= 0)
         return false;
     
     local dist = AIMap.DistanceManhattan(start, end);
