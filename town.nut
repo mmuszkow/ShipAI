@@ -17,11 +17,11 @@ function Town::GetCargoAcceptingCoastTiles(range, cargo) {
     SafeAddRectangle(tiles, AITown.GetLocation(this.id), range);
     tiles.Valuate(AITile.IsCoastTile);
     tiles.KeepValue(1);
-    tiles.Valuate(_val_IsDockCapable);
-    tiles.KeepValue(1);
     tiles.Valuate(AITile.GetClosestTown);
     tiles.KeepValue(this.id);
-    /* Tile must accept passangers. */
+    tiles.Valuate(_val_IsDockCapable);
+    tiles.KeepValue(1);
+    /* Tile must accept cargo. */
     tiles.Valuate(AITile.GetCargoAcceptance, cargo, 1, 1,
                   AIStation.GetCoverageRadius(AIStation.STATION_DOCK));
     tiles.KeepAboveValue(7); /* as doc says */

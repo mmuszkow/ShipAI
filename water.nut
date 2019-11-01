@@ -15,7 +15,7 @@ class Water {
     /* Max path length. */
     max_path_len = 400;
     /* Max dock distance from the city center. */
-    max_city_dock_distance = 20;
+    max_city_dock_distance = 15;
     /* Max path parts. */
     max_parts = 1;
 
