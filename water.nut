@@ -27,8 +27,8 @@ class Water {
     /* Pathfinder. */
     pf = WaterPathfinder();
     
-    constructor() {
-        maintenance = Maintenance();
+    constructor(maintenance) {
+        this.maintenance = maintenance;
     }
 }
 

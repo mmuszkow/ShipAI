@@ -12,22 +12,42 @@ class Maintenance {
         /* Autorenew vehicles when old. */
         AICompany.SetAutoRenewMonths(0);
         AICompany.SetAutoRenewStatus(true);
-        
-        /* Create groups. */
-        this._sell_group = AIGroup.CreateGroup(AIVehicle.VT_WATER);
-        local i = 1;
-        while(!AIGroup.SetName(this._sell_group, "Ships to sell #" + i)) {
-            i = i + 1;
-            if(i > 255) break;
-        }
-        if(!AIGroup.IsValidGroup(this._sell_group))
-            AILog.Error("Cannot create a vehicles group");
+
+        _sell_group = GetSellGroup();       
     }
+}
+
+function Maintenance::GetSellGroup() {
+        /* Get existing one. */
+        local groups = AIGroupList();
+        for(local group = groups.Begin(); !groups.IsEnd(); group = groups.Next()) {
+            if(AIGroup.GetName(group) == "Ships to sell")
+                return group;
+        }
+ 
+        /* Create one. */
+        local group = AIGroup.CreateGroup(AIVehicle.VT_WATER);
+        if(!AIGroup.IsValidGroup(group)) {
+            AILog.Error("Cannot create a vehicles group: " + AIError.GetLastErrorString());
+            return -1;
+        }
+        if(!AIGroup.SetName(group, "Ships to sell")) {
+            AILog.Error("Failed to set name for the maintenance group: " + AIError.GetLastErrorString());
+            AIGroup.DeleteGroup(group);
+            return -1;
+        }
+        return group;
 }
 
 function Maintenance::SellUnprofitable() {
     local sold = 0;
-    
+   
+    if(this._sell_group == -1) {
+        this._sell_group = GetSellGroup();
+        if(this._sell_group == -1)
+            return sold;
+    }
+ 
     /* Sell unprofitable in depots. */
     local unprofitable = AIVehicleList_Group(this._sell_group);
     for(local vehicle = unprofitable.Begin(); !unprofitable.IsEnd(); vehicle = unprofitable.Next()) {
@@ -149,7 +169,7 @@ function Maintenance::Perform() {
     this._maintenance_last_performed = AIDate.GetCurrentDate();
 }
 
-/* This is performed once per year. */
+/* This is performed once per 6 months. */
 function Maintenance::PerformIfNeeded() {
     if(AIDate.GetCurrentDate() - this._maintenance_last_performed < 180)
         return;

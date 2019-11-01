@@ -10,8 +10,8 @@ class Ferry extends Water {
     /* Passengers cargo id. */
     _passenger_cargo_id = -1;
     
-    constructor() {
-        Water.constructor();
+    constructor(maintenance) {
+        Water.constructor(maintenance);
         this._passenger_cargo_id = _GetPassengersCargoId();
     }
 }

@@ -6,8 +6,8 @@ class Freight extends Water {
     /* Less this percent of the cargo transported to open a new route. */
     percent_to_open_new_route = 61;
         
-    constructor() {
-        Water.constructor();
+    constructor(maintenance) {
+        Water.constructor(maintenance);
     }
 }
 

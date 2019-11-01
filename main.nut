@@ -10,9 +10,11 @@ function ShipAI::Save() { return {}; }
 
 function ShipAI::Start() {
     SetCompanyName();    
- 
-    local freight = Freight();
-    local ferry = Ferry();
+
+    /* Use single Maintenance instance for both freight and PAX. */
+    local maintenance = Maintenance(); 
+    local freight = Freight(maintenance);
+    local ferry = Ferry(maintenance);
     
     /* Check if we have anything to do, if not repay the loan and wait. */
     if(!freight.AreShipsAllowed()) {
