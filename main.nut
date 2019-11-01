@@ -65,8 +65,8 @@ function ShipAI::Start() {
         if(statues_founded > 0) AILog.Info("Statues founded: " + statues_founded);
         if(trees_planted > 0) AILog.Info("Trees planted: " + trees_planted);
 
-        /* After first iteration build our HQ, it will boost our eco in one city. */
-        if(iter == 0 && !BuildHQ()) AILog.Error("Failed to build HQ");
+        /* HQ will boost our eco in one city. */
+        BuildHQ();
 
         this.Sleep(50);
         iter++;
@@ -82,6 +82,10 @@ function _val_CanHaveHQ(tile) {
 }
 
 function ShipAI::BuildHQ() {
+    /* Check if we have HQ already built. */
+    if(AICompany.GetCompanyHQ(AICompany.COMPANY_SELF) != AIMap.TILE_INVALID)
+        return true;
+
     /* Get towns we have presence in (we have already built a port). */
     local towns = AITownList();
     towns.Valuate(AITown.GetRating, AICompany.COMPANY_SELF);

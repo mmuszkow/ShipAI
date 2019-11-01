@@ -151,6 +151,15 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
             && AIVehicle.GetProfitLastYear(existing_vehicle) < 100)
                 return false;
 
+            /* Get price. */
+            local engine = AIVehicle.GetEngineType(existing_vehicle);
+            local vehicle_price = AIEngine.GetPrice(engine);
+            if(!AIEngine.IsValidEngine(engine) || vehicle_price < 0) {
+                AILog.Error("The chosen vehicle model is no longer produced");
+                return false;
+            }
+            WaitToHaveEnoughMoney(vehicle_price);
+
             local vehicle = AIVehicle.CloneVehicle(depot, existing_vehicle, true);
             if(!AIVehicle.IsValidVehicle(vehicle)) {
                 AILog.Error("Failed to clone ship: " + AIError.GetLastErrorString());
