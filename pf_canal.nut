@@ -20,12 +20,23 @@ function _val_IsLockCapableCoast(tile) {
     if(AIMarine.IsLockTile(tile))
         return true;
     return  AITile.IsWaterTile(GetHillFrontTile(tile, 1)) &&
+            AITile.IsWaterTile(GetHillFrontTile(tile, 2)) &&
             AITile.IsBuildable(GetHillBackTile(tile, 1));
 }
 
 /* Finds a lock/possible lock tile next to the water tile. */
 function CanalPathfinder::_FindAdjacentLockTile(water, direction) {
+    /* Let's look for existing locks first. */
     local tiles = AITileList();
+    SafeAddRectangle(tiles, water, 1);
+    tiles.Valuate(IsSimpleSlope);
+    tiles.KeepValue(1);
+    tiles.Valuate(AIMarine.IsLockTile);
+    tiles.KeepValue(1);
+    if(!tiles.IsEmpty())
+        return tiles.Begin();
+
+    tiles = AITileList();
     SafeAddRectangle(tiles, water, 1);
     tiles.Valuate(_val_IsLockCapable);
     tiles.KeepValue(1);
@@ -33,7 +44,6 @@ function CanalPathfinder::_FindAdjacentLockTile(water, direction) {
     tiles.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
     if(tiles.IsEmpty())
         return -1;
-
     return tiles.Begin();
 }
 
@@ -67,21 +77,38 @@ function CanalPathfinder::FindPath(start, end, max_distance, ignored = []) {
     if(dist == -1 || dist > max_distance)
         return false;
 
-    /* We operate on land only, so if any of the points is on water we need to 
+    /* We operate on land only, so if any of the points is on (sea)water we need to 
      * find adjacent tile capable of hosting a lock */
-    if(AITile.IsWaterTile(start) && (AITile.GetMaxHeight(start) == 0)) {
+    if((AITile.IsWaterTile(start) || AIMarine.IsDockTile(start) || AIMarine.IsBuoyTile(start))
+        && (AITile.GetMaxHeight(start) == 0)) {
         start = _FindAdjacentLockTile(start, end);
         /* Locks cannot be entered from sides. */
         if(start != -1)
             ignored.extend(_LockGetExitSideTiles(start));
+    } else if(AIMarine.IsDockTile(start)) {
+        /* Because we compare height in next step, we need to ensure we have the proper tile. */
+        local dock = Dock(start);
+        if(dock.is_landdock)
+            start = dock.GetPfTile(end);
     }
-    if(AITile.IsWaterTile(end) && (AITile.GetMaxHeight(end) == 0)) {
+    
+    /* Do the same for the destination tile. */
+    if((AITile.IsWaterTile(end) || AIMarine.IsDockTile(end) || AIMarine.IsBuoyTile(end)) 
+        && (AITile.GetMaxHeight(end) == 0)) {
         end = _FindAdjacentLockTile(end, start);
         /* Locks cannot be entered from sides. */
         if(end != -1)
             ignored.extend(_LockGetExitSideTiles(end));
+    } else if(AIMarine.IsDockTile(end)) {
+        local dock = Dock(end);
+        if(dock.is_landdock)
+            end = dock.GetPfTile(start);
     }
     if(start == -1 || end == -1)
+        return false;
+
+    /* We don't use locks in canals, so we won't be able to deal with height difference. */
+    if(AITile.GetMaxHeight(start) != AITile.GetMaxHeight(end))
         return false;
 
     this._dest = end;
@@ -101,12 +128,12 @@ function CanalPathfinder::FindPath(start, end, max_distance, ignored = []) {
 
 function CanalPathfinder::_Cost(self, path, new_tile, new_direction) {
     if(path == null) return 0;
-    
+   
     /* Using existing canal. */
     if( AIMarine.IsCanalTile(new_tile) || 
         AIMarine.IsLockTile(new_tile) ||
         AIMarine.IsBuoyTile(new_tile) || 
-        (AITile.IsWaterTile(new_tile) && (AITile.GetMaxHeight(new_tile) > 0))) /* river */
+        AITile.IsWaterTile(new_tile))
         return path.GetCost() + 1;
     
     /* Creating new canal tile */
@@ -128,13 +155,11 @@ function CanalPathfinder::_Neighbours(self, path, cur_node) {
         cur_node + WEST,
         cur_node + EAST
     ];
-    foreach(tile in offsets) {        
-        if(AITile.GetSlope(tile) != AITile.SLOPE_FLAT)
-            continue;
-        if((AITile.IsBuildable(tile) || AIMarine.IsCanalTile(tile) ||
+    foreach(tile in offsets) {
+        if(tile == self._dest || ((AITile.GetSlope(tile) == AITile.SLOPE_FLAT) &&
+            (AITile.IsBuildable(tile) || AIMarine.IsCanalTile(tile) ||
             AIMarine.IsLockTile(tile) || AIMarine.IsBuoyTile(tile) || 
-            (AITile.IsWaterTile(tile) && (AITile.GetMaxHeight(tile) > 0)))
-            && !AIMarine.IsWaterDepotTile(tile))
+            AITile.IsWaterTile(tile)) && !AIMarine.IsWaterDepotTile(tile)))
             tiles.append([tile, self._GetDirection(cur_node, tile)]);
     }
 
