@@ -102,7 +102,7 @@ function Ferry::BuildFerryRoutes() {
             }
             
             /* Buy and schedule ship. */
-            if(BuildAndStartShip(dock1, dock2, this._passenger_cargo_id, false, town.GetMonthlyProduction(this._passenger_cargo_id))) {
+            if(BuildAndStartShip(dock1, dock2, this._passenger_cargo_id, false, false, town.GetMonthlyProduction(this._passenger_cargo_id))) {
                 AILog.Info("Building ferry between " + town.GetName() + " and " + town2.GetName());
                 ferries_built++;
             } else if(!AreFerriesAllowed())

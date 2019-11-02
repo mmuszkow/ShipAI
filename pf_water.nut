@@ -27,7 +27,7 @@ function WaterPathfinder::_IsWater(tile) {
             AIMarine.IsWaterDepotTile(tile);
 }
 
-function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts) {
+function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts, use_canals) {
     this.paths = [];
     this.is_canal = [];
     this.has_canal = false;
@@ -79,8 +79,8 @@ function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts) {
     }
 
     /* If the docks are on land and we cannot build canals there is nothing we can do. */
-    local use_canals = AreCanalsAllowed();
-    if(!use_canals && (dock1.is_landdock || dock2.is_landdock))
+    local build_canals = use_canals && AreCanalsAllowed();
+    if(!build_canals && (dock1.is_landdock || dock2.is_landdock))
         return false;
 
     /* For the landdocks we need to avoid going over tiles where the dock will be placed */
@@ -109,7 +109,7 @@ function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts) {
             len_so_far += coast_pf.path.len();
         } else {
             /* No coast path, let's try planning a canal */
-            if(use_canals && canal_pf.FindPath(obs_start, obs_end, max_obs_len, ignored)) {
+            if(build_canals && canal_pf.FindPath(obs_start, obs_end, max_obs_len, ignored)) {
                 /* We found a suitable canal */
                 this.paths.push(canal_pf.path);
                 this.is_canal.push(true);

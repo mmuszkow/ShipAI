@@ -138,7 +138,7 @@ function Freight::BuildTownFreightRoutes() {
                     continue;
                 }
                 
-                if(BuildAndStartShip(dock1, dock2, cargo, true, producer.GetMonthlyProduction(cargo))) {
+                if(BuildAndStartShip(dock1, dock2, cargo, true, true, producer.GetMonthlyProduction(cargo))) {
                     AILog.Info("Building " + AICargo.GetCargoLabel(cargo) + " ship between " + producer.GetName() + " and " + acceptor.GetName());
                     ships_built++;
                     break;
@@ -279,7 +279,7 @@ function Freight::BuildIndustryFreightRoutes() {
                     }
                 }
                 
-                if(BuildAndStartShip(dock1, dock2, cargo, true, producer.GetMonthlyProduction(cargo))) {
+                if(BuildAndStartShip(dock1, dock2, cargo, true, true, producer.GetMonthlyProduction(cargo))) {
                     AILog.Info("Building " + AICargo.GetCargoLabel(cargo) + " ship between " + producer.GetName() + " and " + acceptor.GetName());
                     ships_built++;
                     break;

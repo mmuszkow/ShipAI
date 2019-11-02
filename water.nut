@@ -132,7 +132,7 @@ function Water::FindVehicleServingRoute(dock1, dock2, depot, cargo) {
     return vehicles.Begin();
 }
 
-function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_production) {
+function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, use_canals, monthly_production) {
     if(monthly_production <= 0 || !ship_model.ExistsForCargo(cargo))
         return false;
     
@@ -177,7 +177,7 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, monthly_produc
     } 
 
     /* No possible water connection. */
-    if(!pf.FindPath(dock1, dock2, this.max_path_len, this.max_parts))
+    if(!pf.FindPath(dock1, dock2, this.max_path_len, this.max_parts, use_canals))
         return false;
  
     /* Build infrastructure. */
