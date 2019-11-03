@@ -115,11 +115,11 @@ function Dock::GetOccupiedTiles() {
         case 0:
             /* West */
             tiles.append(this.tile + AIMap.GetTileIndex(1, 0));
+            tiles.append(this.tile + AIMap.GetTileIndex(-1, 0));
             if(this.is_landdock) {        
                 tiles.append(this.tile + AIMap.GetTileIndex(0, 1));
                 tiles.append(this.tile + AIMap.GetTileIndex(0, -1));
                 tiles.append(this.tile + AIMap.GetTileIndex(-1, -1));
-                tiles.append(this.tile + AIMap.GetTileIndex(-1, 0));
                 tiles.append(this.tile + AIMap.GetTileIndex(-1, 1));
                 tiles.append(this.tile + AIMap.GetTileIndex(1, -1));
                 tiles.append(this.tile + AIMap.GetTileIndex(2, -1));
@@ -128,11 +128,11 @@ function Dock::GetOccupiedTiles() {
         case 1:
             /* South. */
             tiles.append(this.tile + AIMap.GetTileIndex(0, 1));
+            tiles.append(this.tile + AIMap.GetTileIndex(0, -1));
             if(this.is_landdock) {
                 tiles.append(this.tile + AIMap.GetTileIndex(-1, 0));
                 tiles.append(this.tile + AIMap.GetTileIndex(1, 0));
                 tiles.append(this.tile + AIMap.GetTileIndex(-1, -1));
-                tiles.append(this.tile + AIMap.GetTileIndex(0, -1));
                 tiles.append(this.tile + AIMap.GetTileIndex(1, -1));
                 tiles.append(this.tile + AIMap.GetTileIndex(1, 1));
                 tiles.append(this.tile + AIMap.GetTileIndex(1, 2));
@@ -141,6 +141,7 @@ function Dock::GetOccupiedTiles() {
         case 2:
             /* North. */
             tiles.append(this.tile + AIMap.GetTileIndex(0, -1));
+            tiles.append(this.tile + AIMap.GetTileIndex(0, 1));
             if(this.is_landdock) {
                 tiles.append(this.tile + AIMap.GetTileIndex(-1, 0));
                 tiles.append(this.tile + AIMap.GetTileIndex(1, 0));
@@ -154,11 +155,11 @@ function Dock::GetOccupiedTiles() {
         case 3:
             /* East. */
             tiles.append(this.tile + AIMap.GetTileIndex(-1, 0));
+            tiles.append(this.tile + AIMap.GetTileIndex(1, 0));
             if(this.is_landdock) {
                 tiles.append(this.tile + AIMap.GetTileIndex(0, -1));
                 tiles.append(this.tile + AIMap.GetTileIndex(0, 1));
                 tiles.append(this.tile + AIMap.GetTileIndex(1, -1));
-                tiles.append(this.tile + AIMap.GetTileIndex(1, 0));
                 tiles.append(this.tile + AIMap.GetTileIndex(1, 1));
                 tiles.append(this.tile + AIMap.GetTileIndex(-2, 1));
                 tiles.append(this.tile + AIMap.GetTileIndex(-1, 1));
@@ -182,106 +183,59 @@ function _val_IsDockCapable(tile) {
         AITile.IsWaterTile(front2) && !AIMarine.IsWaterDepotTile(front2);
 }
 
-function _val_IsLockCapable(tile) {
-    if(!IsSimpleSlope(tile) || (!AIMarine.IsLockTile(tile) && !AITile.IsBuildable(tile)))
-        return false;
-
-    local front1 = GetHillFrontTile(tile, 1);
-    local front2 = GetHillFrontTile(tile, 2);
-    local back1 = GetHillBackTile(tile, 1);
-    local back2 = GetHillBackTile(tile, 2);
-    if( AITile.GetSlope(front1) != AITile.SLOPE_FLAT || 
-        AITile.GetSlope(front2) != AITile.SLOPE_FLAT || 
-        AITile.GetSlope(back1) != AITile.SLOPE_FLAT || 
-        AITile.GetSlope(back2) != AITile.SLOPE_FLAT)
-        return false;
-    
-    if(AIMarine.IsLockTile(tile) && AIMarine.IsLockTile(front1) && AIMarine.IsLockTile(back1))
-        return true;
-    
-    return  ((AITile.IsWaterTile(front1) && !AIMarine.IsWaterDepotTile(front1) && !AIBridge.IsBridgeTile(front1)) &&
-             (AITile.IsWaterTile(front2) && !AIMarine.IsWaterDepotTile(front2)) &&
-             (AITile.IsBuildable(back1) || AITile.IsWaterTile(back1)) &&
-             (AITile.IsBuildable(back2)  || AITile.IsWaterTile(back2)));
-}
-
 /* Should be used only for sea */
 function _val_IsWaterDepotCapable(tile, orientation) {
     if(!AITile.IsWaterTile(tile) || AITile.GetMaxHeight(tile) > 0 || AIBridge.IsBridgeTile(tile))
         return false;
     
-    local back, front;
+    /* back is the depot tile, front is the tile in front of the depot,
+     * left/right are side tiles. */
+    local back, front, left1, left2, right1, right2;
     switch(orientation) {
         /* West. */
         case 0:
             back = tile + EAST;
             front = tile + WEST;
+            left1 = tile + SOUTH;
+            left2 = tile + SOUTH;
+            right1 = tile + NORTH;
+            right2 = tile + NORTH;
             break;
         /* South. */
         case 1:
             back = tile + NORTH;
             front = tile + SOUTH;
+            left1 = tile + EAST;
+            left2 = tile + EAST;
+            right1 = tile + WEST;
+            right2 = tile + WEST;
             break;
         /* North. */
         case 2:
             back = tile + SOUTH;
             front = tile + NORTH;
+            left1 = tile + WEST;
+            left2 = tile + WEST;
+            right1 = tile + EAST;
+            right2 = tile + EAST;
             break;
         /* East. */
         default:
             back = tile + WEST;
             front = tile + EAST;
+            left1 = tile + NORTH;
+            left2 = tile + NORTH;
+            right1 = tile + SOUTH;
+            right2 = tile + SOUTH;
             break;
     }
-    return AITile.IsWaterTile(back) && !AIBridge.IsBridgeTile(back) && AITile.IsWaterTile(front);
-}
-
-function Dock::GetNecessaryCoastCrossesTo(dock2) {
-    local coasts = [];
-    local tmp = this.tile;
-    local x0 = AIMap.GetTileX(this.tile), y0 = AIMap.GetTileY(this.tile);
-    local x1 = AIMap.GetTileX(dock2.tile), y1 = AIMap.GetTileY(dock2.tile);
-    local dx = abs(x1 - x0), dy = abs(y1 - y0);
-    local sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
-    local err = (dx > dy ? dx : -dy)/2, e2;
-    while(true) {
-        tmp = AIMap.GetTileIndex(x0, y0);
-        if(AITile.IsCoastTile(tmp))
-            coasts.append(tmp);
-        if(tmp == dock2.tile)
-            break;        
-        e2 = err;
-        if(e2 >-dx) { err -= dy; x0 += sx; }
-        if(e2 < dy) { err += dx; y0 += sy; }
-    }
-    return coasts;
-}
-
-function Dock::GetLockNearby() {
-    local tiles = AITileList();
-    SafeAddRectangle(tiles, this.tile, 5);
-    tiles.Valuate(AIMarine.IsLockTile);
-    tiles.KeepValue(1);
-    tiles.Valuate(AITile.GetSlope);
-    tiles.RemoveValue(AITile.SLOPE_FLAT);
-    /* Return existing lock. */
-    if(!tiles.IsEmpty()) {
-        tiles.Valuate(AIMap.DistanceManhattan, this.tile);
-        tiles.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
-        return tiles.Begin();
-    }
     
-    /* Find possible lock location. */
-    tiles = AITileList();
-    SafeAddRectangle(tiles, this.tile, 5);
-    tiles.Valuate(_val_IsLockCapable);
-    tiles.KeepValue(1);
-    if(tiles.IsEmpty())
-        return -1;
-    
-    tiles.Valuate(AIMap.DistanceManhattan, this.tile);
-    tiles.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
-    return tiles.Begin();
+    /* Must have at least one exit and shouldn't block
+       any infrastructure on the sides (like dock or lock). */
+    return AITile.IsWaterTile(back) && !AIBridge.IsBridgeTile(back) &&
+           AITile.IsWaterTile(front) && AITile.IsWaterTile(left1) &&
+           AITile.IsWaterTile(left2) && AITile.IsWaterTile(right1) &&
+           AITile.IsWaterTile(right2);
 }
 
 function Dock::EstimateCost() {
@@ -368,71 +322,47 @@ function Dock::Build() {
     return -1;
 }
 
-/* This is the default water depot location. */
-function Dock::_GetBestWaterDepotLocation() {
-    local best = -1;
+/* Land docks have its water depot in fixed place. */
+function Dock::_GetLandDockDepotLocation() {
+    if(!this.is_landdock)
+        return -1;
     switch(this.orientation) {
-        /* West. */
+        /* West. */ 
         case 0:
-            if(this.is_landdock)
-                best = this.tile + AIMap.GetTileIndex(2, -1);
-            else
-                best = this.tile + AIMap.GetTileIndex(4, 0);
-            break;
+            return this.tile + AIMap.GetTileIndex(2, -1);
         /* South. */
         case 1:
-            if(this.is_landdock)
-                best = this.tile + AIMap.GetTileIndex(1, 2);
-            else
-                best = this.tile + AIMap.GetTileIndex(0, 4);
-            break;
-        /* North. */
+            return this.tile + AIMap.GetTileIndex(1, 2);
+            /* North. */
         case 2:
-            if(this.is_landdock)
-                best = this.tile + AIMap.GetTileIndex(-1, -2);
-            else
-                best = this.tile + AIMap.GetTileIndex(0, -4);
-            break;
-        /* East. */
+            return this.tile + AIMap.GetTileIndex(-1, -2);
+            /* East. */ 
         default:
-            if(this.is_landdock)
-                best = this.tile + AIMap.GetTileIndex(-2, 1);
-            else
-                best = this.tile + AIMap.GetTileIndex(-4, 0);
-            break;
+            return this.tile + AIMap.GetTileIndex(-2, 1);
     }
-    return best;
 }
 
 /* Finds water depot close to the dock. */
 function Dock::FindWaterDepot() {
-    local best = _GetBestWaterDepotLocation();
+    /* Artificial docks have its water depot in fixed place. */
+    if(this.is_landdock) {
+        local depot = _GetLandDockDepotLocation();
+        if(!AIMarine.IsWaterDepotTile(depot))
+            return -1;
+        return depot;
+    }
     
-    /* Artificial docks have fixed place to build the water depot. */
-    if(this.is_landdock && best == -1)
-        return -1;
-    
-    if(best != -1 &&
-        AIMarine.IsWaterDepotTile(best) && 
-        (AITile.GetOwner(best) == AICompany.ResolveCompanyID(AICompany.COMPANY_SELF)))
-        return best;
-
     /* Let's look nearby. */
     local depots = AIDepotList(AITile.TRANSPORT_WATER);
     depots.Valuate(AIMap.DistanceManhattan, this.tile);
     depots.KeepBelowValue(6);
     if(depots.IsEmpty())
         return -1;
-    
     depots.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
     return depots.Begin();    
 }
 
-function Dock::_TryBuildWaterDepot(depot) {
-    if(AIMarine.IsWaterDepotTile(depot) &&
-        (AITile.GetOwner(depot) == AICompany.ResolveCompanyID(AICompany.COMPANY_SELF)))
-        return depot;
-    
+function Dock::_BuildWaterDepot(depot) {
     switch(this.orientation) {
         /* West. */
         case 0:
@@ -461,20 +391,13 @@ function Dock::_TryBuildWaterDepot(depot) {
 
 /* Builds water depot. */
 function Dock::BuildWaterDepot() {
-    /* Let's try best locations first. */
-    local best = _GetBestWaterDepotLocation();
-    
-    /* Artificial docks have fixed place to build the water depot. */
-    if(this.is_landdock && best == -1)
-        return -1;
-    
-    if(_TryBuildWaterDepot(best) != -1)
-        return best;
-    
+    if(this.is_landdock)
+        return _BuildWaterDepot(_GetLandDockDepotLocation());   
+ 
     local depotarea = AITileList();
     SafeAddRectangle(depotarea, this.tile, 5);
     depotarea.RemoveItem(this.tile);
-    if(!is_landdock && !is_offshore) {
+    if(!this.is_offshore) {
         depotarea.RemoveItem(GetHillFrontTile(this.tile, 1));
         depotarea.RemoveItem(GetHillFrontTile(this.tile, 2));
     }
@@ -482,10 +405,9 @@ function Dock::BuildWaterDepot() {
     depotarea.KeepValue(1);
     depotarea.Valuate(AIMap.DistanceManhattan, this.tile);
     depotarea.KeepAboveValue(3);
-    depotarea.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
-    
+    depotarea.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING); 
     for(local depot = depotarea.Begin(); !depotarea.IsEnd(); depot = depotarea.Next())
-        if(_TryBuildWaterDepot(depot) != -1)
+        if(_BuildWaterDepot(depot) != -1)
             return depot;
     return -1;
 }
