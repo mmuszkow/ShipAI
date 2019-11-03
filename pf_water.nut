@@ -83,16 +83,19 @@ function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts, use_ca
     if(!build_canals && (dock1.is_landdock || dock2.is_landdock))
         return false;
 
-    /* For the landdocks we need to avoid going over tiles where the dock will be placed */
-    local ignored = [];
-    if(dock1.is_landdock)
-        ignored.extend(dock1.GetOccupiedTiles());
-    else if(!dock1.is_offshore)
-        ignored.push(GetHillBackTile(dock1.tile, 1));
-    if(dock2.is_landdock)
-        ignored.extend(dock2.GetOccupiedTiles());
-    else if(!dock2.is_offshore)
-        ignored.push(GetHillBackTile(dock2.tile, 1));
+    /* Canal pathfinder must not go over dock tiles, same goes for locks. */
+    local land_ignored = [];
+    local sea_ignored = [];
+    if(build_canals) {
+        if(dock1.is_landdock)
+            land_ignored.extend(dock1.GetOccupiedTiles());
+        else if(!dock1.is_offshore)
+            sea_ignored.extend(dock1.GetOccupiedTiles());
+        if(dock2.is_landdock)
+            land_ignored.extend(dock2.GetOccupiedTiles());
+        else if(!dock2.is_offshore)
+            sea_ignored.extend(dock2.GetOccupiedTiles());
+    }
 
     /* Try to avoid obstacles */
     for(local i=1; i<straight_paths.len(); i++) {
@@ -109,7 +112,7 @@ function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts, use_ca
             len_so_far += coast_pf.path.len();
         } else {
             /* No coast path, let's try planning a canal */
-            if(build_canals && canal_pf.FindPath(obs_start, obs_end, max_obs_len, ignored)) {
+            if(build_canals && canal_pf.FindPath(obs_start, obs_end, max_obs_len, land_ignored, sea_ignored)) {
                 /* We found a suitable canal */
                 this.paths.push(canal_pf.path);
                 this.is_canal.push(true);
@@ -209,7 +212,7 @@ function WaterPathfinder::BuildCanals() {
                    AIMarine.IsCanalTile(tile) || AIMarine.IsBuoyTile(tile) ||
                    AIMarine.IsLockTile(tile))
                     continue;
-                
+
                 if(IsSimpleSlope(tile)) {
                     if(!AIMarine.BuildLock(tile)) {
                         AISign.BuildSign(tile, "L");

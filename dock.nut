@@ -115,8 +115,8 @@ function Dock::GetOccupiedTiles() {
         case 0:
             /* West */
             tiles.append(this.tile + AIMap.GetTileIndex(1, 0));
-            tiles.append(this.tile + AIMap.GetTileIndex(-1, 0));
             if(this.is_landdock) {        
+                tiles.append(this.tile + AIMap.GetTileIndex(-1, 0));
                 tiles.append(this.tile + AIMap.GetTileIndex(0, 1));
                 tiles.append(this.tile + AIMap.GetTileIndex(0, -1));
                 tiles.append(this.tile + AIMap.GetTileIndex(-1, -1));
@@ -128,8 +128,8 @@ function Dock::GetOccupiedTiles() {
         case 1:
             /* South. */
             tiles.append(this.tile + AIMap.GetTileIndex(0, 1));
-            tiles.append(this.tile + AIMap.GetTileIndex(0, -1));
             if(this.is_landdock) {
+                tiles.append(this.tile + AIMap.GetTileIndex(0, -1));
                 tiles.append(this.tile + AIMap.GetTileIndex(-1, 0));
                 tiles.append(this.tile + AIMap.GetTileIndex(1, 0));
                 tiles.append(this.tile + AIMap.GetTileIndex(-1, -1));
@@ -141,8 +141,8 @@ function Dock::GetOccupiedTiles() {
         case 2:
             /* North. */
             tiles.append(this.tile + AIMap.GetTileIndex(0, -1));
-            tiles.append(this.tile + AIMap.GetTileIndex(0, 1));
             if(this.is_landdock) {
+                tiles.append(this.tile + AIMap.GetTileIndex(0, 1));
                 tiles.append(this.tile + AIMap.GetTileIndex(-1, 0));
                 tiles.append(this.tile + AIMap.GetTileIndex(1, 0));
                 tiles.append(this.tile + AIMap.GetTileIndex(-1, 1));
@@ -155,8 +155,8 @@ function Dock::GetOccupiedTiles() {
         case 3:
             /* East. */
             tiles.append(this.tile + AIMap.GetTileIndex(-1, 0));
-            tiles.append(this.tile + AIMap.GetTileIndex(1, 0));
             if(this.is_landdock) {
+                tiles.append(this.tile + AIMap.GetTileIndex(1, 0));
                 tiles.append(this.tile + AIMap.GetTileIndex(0, -1));
                 tiles.append(this.tile + AIMap.GetTileIndex(0, 1));
                 tiles.append(this.tile + AIMap.GetTileIndex(1, -1));
@@ -354,8 +354,8 @@ function Dock::FindWaterDepot() {
     
     /* Let's look nearby. */
     local depots = AIDepotList(AITile.TRANSPORT_WATER);
-    depots.Valuate(AIMap.DistanceManhattan, this.tile);
-    depots.KeepBelowValue(6);
+    depots.Valuate(AIMap.DistanceMax, this.tile);
+    depots.KeepBelowValue(7);
     if(depots.IsEmpty())
         return -1;
     depots.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);

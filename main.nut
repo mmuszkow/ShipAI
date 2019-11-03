@@ -163,7 +163,7 @@ function ShipAI::PlantTreesIfRich() {
     for(local town_id = towns.Begin(); !towns.IsEnd(); town_id = towns.Next()) {
         /* We plant trees for 3 months max */
         if(AIDate.GetCurrentDate() - start > 90)
-            return founded;        
+            return planted;        
         
         local area = Town(town_id).GetArea();
         area.Valuate(AITile.IsBuildable);
