@@ -20,12 +20,19 @@ function _val_IsLockCapableCoast(tile, ignored) {
     if(AIMarine.IsLockTile(tile))
         return true;
     local front1 = GetHillFrontTile(tile, 1);
+    local front2 = GetHillFrontTile(tile, 2);
     local back1 = GetHillBackTile(tile, 1);
-    return  AITile.IsWaterTile(front1) && !AIMarine.IsCanalTile(back1) &&
-            AITile.IsWaterTile(GetHillFrontTile(tile, 2)) && /* we need space in front so ship can enter */
-            AITile.IsWaterTile(GetHillFrontTile(tile, 3)) && /* additional space so we don't block lock in front */
-            AITile.IsBuildable(back1) && (AITile.GetSlope(back1) == AITile.SLOPE_FLAT)
-            !ArrayContains(ignored, tile) && !ArrayContains(ignored, back1) && !ArrayContains(ignored, front1);
+    foreach(item in ignored)
+        if(item == tile || item == front1 || item == front2 || item == back1)
+            return false;
+    return  AITile.IsWaterTile(front1) && (AITile.GetSlope(front1) == AITile.SLOPE_FLAT) &&
+            /* dont destroy existing canals */
+            !AIMarine.IsCanalTile(back1) &&
+            /* we need space in front so ship can enter */
+            AITile.IsWaterTile(front2) && (AITile.GetSlope(front2) == AITile.SLOPE_FLAT) &&
+            /* additional space so we don't block lock in front */
+            AITile.IsWaterTile(GetHillFrontTile(tile, 3)) &&
+            AITile.IsBuildable(back1) && (AITile.GetSlope(back1) == AITile.SLOPE_FLAT);
 }
 
 /* Finds a lock/possible lock tile next to the water tile. */
@@ -112,9 +119,6 @@ function CanalPathfinder::FindPath(start, end, max_distance, land_ignored, sea_i
     local lock1 = -1;
     local lock2 = -1;
     
-    //foreach(item in land_ignored) AISign.BuildSign(item, "l");
-    //foreach(item in sea_ignored) AISign.BuildSign(item, "s");
-
     /* Pathfinder operated on land only, if we are on the sealevel or the
        coast where the lock should be is blocked, we need to find a place to put the lock. */
     if((AITile.GetMaxHeight(start) == 0) || ArrayContains(sea_ignored, start)) {
@@ -215,7 +219,7 @@ function CanalPathfinder::_Neighbours(self, path, cur_node) {
         if(tile == self._dest || ((AITile.GetSlope(tile) == AITile.SLOPE_FLAT) &&
             (AITile.IsBuildable(tile) || AIMarine.IsCanalTile(tile) ||
              AIMarine.IsBuoyTile(tile) || AITile.IsWaterTile(tile)) && 
-            !AIMarine.IsWaterDepotTile(tile)))
+            !AIMarine.IsWaterDepotTile(tile)) && !AIMarine.IsLockTile(tile))
             tiles.append([tile, self._GetDirection(cur_node, tile)]);
     }
 

@@ -235,7 +235,9 @@ function _val_IsWaterDepotCapable(tile, orientation) {
     return AITile.IsWaterTile(back) && !AIBridge.IsBridgeTile(back) &&
            AITile.IsWaterTile(front) && AITile.IsWaterTile(left1) &&
            AITile.IsWaterTile(left2) && AITile.IsWaterTile(right1) &&
-           AITile.IsWaterTile(right2);
+           AITile.IsWaterTile(right2) && !AIMarine.IsLockTile(left1) &&
+           !AIMarine.IsLockTile(left2) && !AIMarine.IsLockTile(right1) &&
+           !AIMarine.IsLockTile(right2);
 }
 
 function Dock::EstimateCost() {

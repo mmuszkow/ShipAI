@@ -214,15 +214,11 @@ function WaterPathfinder::BuildCanals() {
                     continue;
 
                 if(IsSimpleSlope(tile)) {
-                    if(!AIMarine.BuildLock(tile)) {
-                        AISign.BuildSign(tile, "L");
+                    if(!AIMarine.BuildLock(tile))
                         return false;
-                    }
                 } else {
-                    if(!AIMarine.BuildCanal(tile)) {
-                        AISign.BuildSign(tile, "C");
+                    if(!AIMarine.BuildCanal(tile))
                         return false;
-                    }
                 }
             }
         }
