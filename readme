@@ -1,6 +1,6 @@
 # ShipAI
 
-OpenTTD AI that operates only ships, it's heavily based on HeliFerry AI.
+OpenTTD AI that operates only ships.
 
 AI supports:
 - freight & PAX cargos
