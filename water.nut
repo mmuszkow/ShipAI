@@ -201,7 +201,7 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, use_canals, mo
         depot = dock1.BuildWaterDepot();
     }
     if(depot == -1) {
-        AILog.Error("Failed to build the water depot near " + dock1.GetName() + ": " + AIError.GetLastErrorString());
+        AILog.Error("Failed to build the water depot near " + dock1.GetName());
         return false;
     }
     local vehicle = BuildShip(depot, cargo, pf.Length() * 2, monthly_production);

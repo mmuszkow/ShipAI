@@ -51,11 +51,19 @@ function Maintenance::SellUnprofitable() {
     /* Sell unprofitable in depots. */
     local unprofitable = AIVehicleList_Group(this._sell_group);
     for(local vehicle = unprofitable.Begin(); !unprofitable.IsEnd(); vehicle = unprofitable.Next()) {
-        if(AIVehicle.IsStoppedInDepot(vehicle))
-            if(AIVehicle.SellVehicle(vehicle))
+        if(AIVehicle.IsStoppedInDepot(vehicle)) {
+            local depot = AIVehicle.GetLocation(vehicle);
+            if(AIVehicle.SellVehicle(vehicle)) {
                 sold++;
-            else
+                
+                /* Sell also the depot if it's unused to avoid the property maintenance costs. */
+                if(AIMap.IsValidTile(depot) && AIVehicleList_Depot(depot).IsEmpty() && !AITile.DemolishTile(depot))
+                    AILog.Error("Failed to demolish unused depot: " + AIError.GetLastErrorString());
+
+                /* The unused stations are kept, to keep the 'good' spots. */
+            } else
                 AILog.Error("Failed to sell unprofitable vehicle: " + AIError.GetLastErrorString());
+        }
     }
 
     /* Find unprofitable. */

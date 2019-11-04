@@ -50,10 +50,13 @@ function ShipAI::Start() {
         ferry.maintenance.PerformIfNeeded();
 
         /* Return the loan if we have the money. */
-        if( AICompany.GetBankBalance(AICompany.COMPANY_SELF) - 
+        if((AICompany.GetLoanAmount() > 0) &&
+           (AICompany.GetBankBalance(AICompany.COMPANY_SELF) - 
             AICompany.GetQuarterlyExpenses(AICompany.COMPANY_SELF, AICompany.CURRENT_QUARTER) -
-            2 * AICompany.GetLoanInterval() > AICompany.GetLoanAmount())
+            2 * AICompany.GetLoanInterval() > AICompany.GetLoanAmount())) {
             AICompany.SetLoanAmount(0);
+            AILog.Info("Loan repaid");
+        }
         
         /* Build statues if we have a lot of money left, they increase the stations ratings. */
         local statues_founded = BuildStatuesIfRich();
@@ -117,6 +120,7 @@ function ShipAI::BuildHQ() {
         /* Rename the dock. */ 
         if(AICompany.BuildCompanyHQ(location.Begin())) {
             AIStation.SetName(station, "ShipAI Headquarters");
+            AILog.Info("Building HQ in " + Town(town).GetName());
             return true;
         }
     }

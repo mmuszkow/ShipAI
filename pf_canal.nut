@@ -180,10 +180,6 @@ function CanalPathfinder::FindPath(start, end, max_distance, land_ignored, sea_i
         this.path.append(lock1);
     this.path.reverse();
     
-    //local r = AIBase.Rand() % 100;
-    //AISign.BuildSign(start, "s"+r+"_"+this.path.len());
-    //AISign.BuildSign(end, "e"+r+"_"+this.path.len());;
-
     return true;
 }
 
