@@ -1,18 +1,34 @@
 require("utils.nut");
 
 class CanalPathfinder {
-    _aystar_class = null;
-    _aystar = null;
-    _dest = -1;
-    _max_length = 100;
+    _queue_class = import("queue.binary_heap", "", 1);
+	_open = null;
+	_closed = null;
+	_goal = null;    
 
-    path = [];
+    _max_length = 100;
     
-    constructor() {
-        _aystar_class = import("graph.aystar", "", 6);
-        _aystar = _aystar_class(this, this._Cost, this._Estimate, this._Neighbours, this._CheckDirection);
-    }
-}
+    path = [];
+};
+
+class CanalPathfinder.Path {
+	parentt = null; /* parent is a reserved keyword */
+	tile = null;
+	direction = null;
+	cost = null;
+	length = null;
+
+	constructor(old_path, new_tile, new_direction) {
+		this.parentt = old_path;
+		this.tile = new_tile;
+		this.direction = new_direction;
+		this.cost = _Cost(old_path, new_tile);
+		if (old_path == null)
+			this.length = 0;
+		else
+			this.length = old_path.length + AIMap.DistanceManhattan(old_path.tile, new_tile);
+	};
+};
 
 function _val_IsLockCapableCoast(tile, ignored) {
     if(!AITile.IsCoastTile(tile) || !IsSimpleSlope(tile))
@@ -105,6 +121,61 @@ function ArrayContains(arr, elem) {
     return false;
 }
 
+function CanalPathfinder::_AystarFindPath(source, goal, ignored_tiles) {
+    this._open = this._queue_class();
+	this._closed = AIList();
+
+	this._goal = goal;
+	local new_path = this.Path(null, source, _GetDominantDirection(source, goal));
+	this._open.Insert(new_path, new_path.cost + _Estimate(source));
+
+	foreach (tile in ignored_tiles)
+		this._closed.AddItem(tile, ~0);
+
+	while (this._open.Count() > 0) {
+		/* Get the path with the best score so far */
+		local path = this._open.Pop();
+		local cur_tile = path.tile;
+		/* Make sure we didn't already passed it */
+		if (this._closed.HasItem(cur_tile)) {
+			/* If the direction is already on the list, skip this entry */
+			if ((this._closed.GetValue(cur_tile) & path.direction) != 0) continue;
+
+			/* Add the new direction */
+			this._closed.SetValue(cur_tile, this._closed.GetValue(cur_tile) | path.direction);
+		} else {
+			/* New entry, make sure we don't check it again */
+			this._closed.AddItem(cur_tile, path.direction);
+		}
+		/* Check if we found the end */
+		if (cur_tile == goal) {
+			_AystarCleanPath();
+			return path;
+		}
+		/* Scan all neighbours */
+		local neighbours = _Neighbours(path, cur_tile);
+		foreach (node in neighbours) {
+			if (node[1] <= 0) throw("directional value should never be zero or negative.");
+
+			if ((this._closed.GetValue(node[0]) & node[1]) != 0) continue;
+			/* Calculate the new paths and add them to the open list */
+			local new_path = this.Path(path, node[0], node[1]);
+			this._open.Insert(new_path, new_path.cost + _Estimate(node[0]));
+		}
+	}
+
+	if (this._open.Count() > 0) return false;
+	_AystarCleanPath();
+	return null;
+
+}
+
+function CanalPathfinder::_AystarCleanPath() {
+	this._closed = null;
+	this._open = null;
+	this._goal = null;
+}
+
 function CanalPathfinder::FindPath(start, end, max_distance, land_ignored, sea_ignored) {
     this.path = [];
     if(!AIMap.IsValidTile(start) || !AIMap.IsValidTile(end) 
@@ -164,17 +235,15 @@ function CanalPathfinder::FindPath(start, end, max_distance, land_ignored, sea_i
     if(AITile.GetMaxHeight(start) != AITile.GetMaxHeight(end))
         return false;
 
-    this._dest = end;
     this._max_length = max_distance;
-    this._aystar.InitializePath([[start, this._GetDominantDirection(start, end)]], [end], land_ignored);
-    local tmp_path = this._aystar.FindPath(10000);
+    local tmp_path = _AystarFindPath(start, end, land_ignored);
     if(tmp_path == false || tmp_path == null)
         return false;
     if(lock2 != -1)
         this.path.append(lock2);
     while(tmp_path != null) {
-        this.path.append(tmp_path.GetTile());
-        tmp_path = tmp_path.GetParent();
+        this.path.append(tmp_path.tile);
+        tmp_path = tmp_path.parentt;
     }
     if(lock1 != -1)
         this.path.append(lock1);
@@ -183,25 +252,34 @@ function CanalPathfinder::FindPath(start, end, max_distance, land_ignored, sea_i
     return true;
 }
 
-function CanalPathfinder::_Cost(self, path, new_tile, new_direction) {
+function CanalPathfinder::Path::_Cost(path, new_tile) {
     if(path == null) return 0;
    
     /* Using existing canal. */
     if( AIMarine.IsCanalTile(new_tile) || 
         AIMarine.IsBuoyTile(new_tile) || 
         AITile.IsWaterTile(new_tile))
-        return path.GetCost() + 1;
+        return path.cost + 1;
     
     /* Creating new canal tile */
-    return path.GetCost() + 5;
+    return path.cost + 5;
 }
 
-function CanalPathfinder::_Estimate(self, cur_tile, cur_direction, goal_tiles) {
-    return AIMap.DistanceManhattan(cur_tile, self._dest);
+function CanalPathfinder::_Estimate(cur_tile) {
+    /* performance comparison, 1024x1024 map, infinite funds:
+     * x 1 : 5602 days, 190 paths
+     * x 1 : 5490 days, 174 paths
+     * x 5 : 3408 days, 198 paths
+     * x 5 : 3524 days, 197 paths
+     * x 8 : 3276 days, 198 paths
+     * x 10: 3184 days, 196 paths 
+     * after upgrade:
+     * x 5 : 3164 days, 205 paths */
+    return AIMap.DistanceManhattan(cur_tile, this._goal) * 5;
 }
 
-function CanalPathfinder::_Neighbours(self, path, cur_node) {
-    if(path.GetLength() + AIMap.DistanceManhattan(cur_node, self._dest) > self._max_length)
+function CanalPathfinder::_Neighbours(path, cur_node) {
+    if(path.length + AIMap.DistanceManhattan(cur_node, this._goal) > this._max_length)
         return [];
     
     local tiles = [];
@@ -212,18 +290,14 @@ function CanalPathfinder::_Neighbours(self, path, cur_node) {
         cur_node + EAST
     ];
     foreach(tile in offsets) {
-        if(tile == self._dest || ((AITile.GetSlope(tile) == AITile.SLOPE_FLAT) &&
+        if(tile == this._goal || ((AITile.GetSlope(tile) == AITile.SLOPE_FLAT) &&
             (AITile.IsBuildable(tile) || AIMarine.IsCanalTile(tile) ||
              AIMarine.IsBuoyTile(tile) || AITile.IsWaterTile(tile)) && 
             !AIMarine.IsWaterDepotTile(tile)) && !AIMarine.IsLockTile(tile))
-            tiles.append([tile, self._GetDirection(cur_node, tile)]);
+            tiles.append([tile, _GetDirection(cur_node, tile)]);
     }
 
     return tiles;
-}
-
-function CanalPathfinder::_CheckDirection(self, tile, existing_direction, new_direction) {
-    return false;
 }
 
 function CanalPathfinder::_GetDominantDirection(from, to) {

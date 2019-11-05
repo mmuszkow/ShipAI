@@ -40,9 +40,11 @@ function ShipAI::Start() {
             ferry.max_parts = 1;
         }
       
+        local start = AIDate.GetCurrentDate();
         /* Build industry-industry & industry-town connections. */
         local new_freights = freight.BuildIndustryFreightRoutes();
         new_freights += freight.BuildTownFreightRoutes();
+        AILog.Info((AIDate.GetCurrentDate() - start) + " days, " + new_freights + " paths");
         freight.maintenance.PerformIfNeeded();
         
         /* Build town-town connections. */
