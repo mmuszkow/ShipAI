@@ -193,14 +193,14 @@ function CanalPathfinder::_Cost(self, path, new_tile, new_direction) {
     if( AIMarine.IsCanalTile(new_tile) || 
         AIMarine.IsBuoyTile(new_tile) || 
         AITile.IsWaterTile(new_tile))
-        return path.GetCost() + this._reuse_cost;
+        return path.GetCost() + self._reuse_cost;
     
     /* Creating new canal tile */
-    return path.GetCost() + this._canal_cost;
+    return path.GetCost() + self._canal_cost;
 }
 
 function CanalPathfinder::_Estimate(self, cur_tile, cur_direction, goal_tiles) {
-    return AIMap.DistanceManhattan(cur_tile, self._dest) * this._canal_cost;
+    return AIMap.DistanceManhattan(cur_tile, self._dest) * self._canal_cost;
 }
 
 function CanalPathfinder::_Neighbours(self, path, cur_node) {

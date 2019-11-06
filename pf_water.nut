@@ -227,3 +227,19 @@ function WaterPathfinder::BuildCanals() {
     return true;
 }
 
+/* Performance comparison, 1024x1024 map, infinite funds:
+ * old coast, generic A*, canal estimate x 1 : 5602 days, 190 paths
+ * old coast, generic A*, canal estimate x 1 : 5490 days, 174 paths
+ * old coast, generic A*, canal estimate x 5 : 3408 days, 198 paths
+ * old coast, generic A*, canal estimate x 5 : 3524 days, 197 paths
+ * old coast, generic A*, canal estimate x 8 : 3276 days, 198 paths
+ * old coast, generic A*, canal estimate x 10: 3184 days, 196 paths 
+ * old coast, inline A* , canal estimate x 5 : 3164 days, 205 paths 
+ * new coast, generic A*, canal estimate x 5 : 3098 days, 240 paths 
+ *
+ * generic A* vs inline A*: inlining and removing unused functions from Graph.Aystar.6
+ * doesn't bring any major performance gain (and everybody is doing that in their AIs...)
+ *
+ * old vs new coast: old was following water tiles next to coast, new is following coast tiles
+ */
+
