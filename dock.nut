@@ -59,6 +59,10 @@ class Dock {
     }
 }
 
+function Dock::IsValidStation() {
+    return AIStation.IsValidStation(AIStation.GetStationID(this.tile));
+}
+
 function Dock::GetName() {
     return AIStation.GetName(AIStation.GetStationID(this.tile));
 }
@@ -176,9 +180,10 @@ function _val_IsDockCapable(tile) {
     
     local front1 = GetHillFrontTile(tile, 1);
     local front2 = GetHillFrontTile(tile, 2);
-    if(AITile.GetSlope(front1) != AITile.SLOPE_FLAT || AITile.GetSlope(front2) != AITile.SLOPE_FLAT)
+    if(AITile.GetSlope(front1) != AITile.SLOPE_FLAT ||
+       AITile.GetSlope(front2) != AITile.SLOPE_FLAT)
         return false;
-    
+
     return AITile.IsWaterTile(front1) && !AIBridge.IsBridgeTile(front1) &&
         AITile.IsWaterTile(front2) && !AIMarine.IsWaterDepotTile(front2);
 }
@@ -256,11 +261,10 @@ function Dock::EstimateCost() {
 }
 
 function Dock::Build() {
-    /* Already there. */
-    if(this.is_offshore ||
-        (AIMarine.IsDockTile(this.tile)  && (AITile.GetOwner(this.tile) == AICompany.ResolveCompanyID(AICompany.COMPANY_SELF))))
+    /* If already there return the existing dock's tile. */
+    if(this.is_offshore || IsValidStation())
         return this.tile;
-        
+   
     /* Artificial dock. */
     if(this.is_landdock) {      
         switch(this.orientation) {

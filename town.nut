@@ -12,9 +12,10 @@ function Town::GetName() {
     return AITown.GetName(this.id);
 }
 
-function Town::GetCargoAcceptingCoastTiles(range, cargo) {
+function Town::GetCargoAcceptingBuildableCoastTiles(range, cargo) {
     local tiles = AITileList();
     SafeAddRectangle(tiles, AITown.GetLocation(this.id), range);
+    /* AITile.IsCoastTile returns only buildable tiles. */
     tiles.Valuate(AITile.IsCoastTile);
     tiles.KeepValue(1);
     tiles.Valuate(AITile.GetClosestTown);
@@ -28,8 +29,8 @@ function Town::GetCargoAcceptingCoastTiles(range, cargo) {
     return tiles;
 }
 
-function Town::GetBestCargoAcceptingCoastTile(range, cargo) {
-    local tiles = GetCargoAcceptingCoastTiles(range, cargo);
+function Town::GetBestCargoAcceptingBuildableCoastTile(range, cargo) {
+    local tiles = GetCargoAcceptingBuildableCoastTiles(range, cargo);
     if(tiles.IsEmpty())
         return -1;
     tiles.Valuate(AITile.GetCargoAcceptance, cargo, 1, 1,
@@ -39,8 +40,10 @@ function Town::GetBestCargoAcceptingCoastTile(range, cargo) {
 }
 
 /* Valuator. */
-function _val_TownCanHaveDock(town_id, range, cargo) {
-    return !Town(town_id).GetCargoAcceptingCoastTiles(range, cargo).IsEmpty();
+function _val_TownCanHaveOrHasDock(town_id, range, cargo) {
+    local town = Town(town_id);
+    return town.GetExistingDock(cargo) != null || 
+          !town.GetCargoAcceptingBuildableCoastTiles(range, cargo).IsEmpty();
 }
 
 function Town::GetExistingDock(cargo) {
@@ -60,7 +63,7 @@ function Town::GetMonthlyProduction(cargo) {
     return (((100 - AITown.GetLastMonthTransportedPercentage(this.id, cargo))/100.0) * AITown.GetLastMonthProduction(this.id, cargo)).tointeger();
 }
 
-function Town::GetArea() {
+function Town::GetInfluencedArea() {
     local center = AITown.GetLocation(this.id);
 
     /* Determine borders. */

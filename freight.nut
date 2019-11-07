@@ -11,7 +11,7 @@ class Freight extends Water {
     }
 }
 
-function Freight::GetIndustriesThatCanHaveDock(industries) {
+function Freight::GetIndustriesThatCanHaveOrHaveDock(industries) {
     /* To avoid exceeding CPU limit in Valuator, we split the list in parts */
     local merged = AIList();
     for(local i=0; i<industries.Count(); i+=50) {
@@ -19,20 +19,20 @@ function Freight::GetIndustriesThatCanHaveDock(industries) {
         splitted.AddList(industries);
         splitted.RemoveTop(i);
         splitted.KeepTop(50);
-        splitted.Valuate(_val_IndustryCanHaveDock, true);
+        splitted.Valuate(_val_IndustryCanHaveOrHasDock, true);
         splitted.RemoveValue(0);
         merged.AddList(splitted);
     }
     return merged;
 }
 
-function Freight::GetCargoProducersThatCanHaveDock(cargo) {
+function Freight::GetCargoProducersThatCanHaveOrHaveDock(cargo) {
     local producers = AIIndustryList_CargoProducing(cargo);
     producers.Valuate(AIIndustry.GetLastMonthProduction, cargo);
     producers.KeepAboveValue(0); /* production more than 0. */
     producers.Valuate(AIIndustry.GetLastMonthTransportedPercentage, cargo);
     producers.KeepBelowValue(this.percent_to_open_new_route); /* Less than 60% of cargo transported. */
-    return GetIndustriesThatCanHaveDock(producers);
+    return GetIndustriesThatCanHaveOrHaveDock(producers);
 }
 
 function Freight::BuildTownFreightRoutes() {
@@ -55,8 +55,8 @@ function Freight::BuildTownFreightRoutes() {
         if(min_capacity == -1)
             continue;
         
-        local producers = GetCargoProducersThatCanHaveDock(cargo);
-        local acceptors = GetTownsThatCanHaveDock(cargo);
+        local producers = GetCargoProducersThatCanHaveOrHaveDock(cargo);
+        local acceptors = GetTownsThatCanHaveOrHaveDock(cargo);
         
         for(local producer_id = producers.Begin(); !producers.IsEnd(); producer_id = producers.Next()) {
             
@@ -129,7 +129,7 @@ function Freight::BuildTownFreightRoutes() {
                 local dock2 = acceptor.GetExistingDock(cargo);
                 /* No dock, but there is a suitable coast nearby. */
                 if(dock2 == null) {
-                    local coast2 = acceptor.GetBestCargoAcceptingCoastTile(this.max_city_dock_distance, cargo);
+                    local coast2 = acceptor.GetBestCargoAcceptingBuildableCoastTile(this.max_city_dock_distance, cargo);
                     if(coast2 != -1)
                         dock2 = Dock(coast2);
                 }
@@ -171,8 +171,8 @@ function Freight::BuildIndustryFreightRoutes() {
         if(min_capacity == -1)
             continue;
         
-        local producers = GetCargoProducersThatCanHaveDock(cargo);
-        local acceptors = GetIndustriesThatCanHaveDock(AIIndustryList_CargoAccepting(cargo));
+        local producers = GetCargoProducersThatCanHaveOrHaveDock(cargo);
+        local acceptors = GetIndustriesThatCanHaveOrHaveDock(AIIndustryList_CargoAccepting(cargo));
         
         for(local producer_id = producers.Begin(); !producers.IsEnd(); producer_id = producers.Next()) {
             
@@ -192,7 +192,7 @@ function Freight::BuildIndustryFreightRoutes() {
             
             /* No dock, but there is a suitable coast nearby. */
             if(dock1 == null) {
-                local coast1 = producer.GetNearestCoastTile();
+                local coast1 = producer.GetNearestBuildableCoastTile();
                 if(coast1 != -1)
                     dock1 = Dock(coast1);
             }
@@ -218,7 +218,7 @@ function Freight::BuildIndustryFreightRoutes() {
             close_acceptors.Valuate(AIIndustry.GetDistanceManhattanToTile, AIIndustry.GetLocation(producer.id));
             close_acceptors.KeepBelowValue(this.max_distance);
             close_acceptors.KeepAboveValue(this.min_distance);
-            close_acceptors.Valuate(_val_IndustryCanHaveDock, false);
+            close_acceptors.Valuate(_val_IndustryCanHaveOrHasDock, false);
             close_acceptors.RemoveValue(0);
             close_acceptors.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
             
@@ -251,7 +251,7 @@ function Freight::BuildIndustryFreightRoutes() {
                 
                 /* No dock, but there is a suitable coast nearby. */
                 if(dock2 == null) {
-                    local coast2 = acceptor.GetNearestCoastTile();
+                    local coast2 = acceptor.GetNearestBuildableCoastTile();
                     if(coast2 != -1)
                         dock2 = Dock(coast2);
                 }

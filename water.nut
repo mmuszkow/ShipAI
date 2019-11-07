@@ -59,7 +59,7 @@ function Water::WaitToHaveEnoughMoney(cost) {
         + AICompany.GetBankBalance(AICompany.COMPANY_SELF)) {}
 }
 
-function Water::GetTownsThatCanHaveDock(cargo, towns = AITownList()) {
+function Water::GetTownsThatCanHaveOrHaveDock(cargo, towns = AITownList()) {
     /* To avoid exceeding CPU limit in Valuator, we split the list in parts */
     local merged = AIList();
     for(local i=0; i<towns.Count(); i+=50) {
@@ -67,7 +67,7 @@ function Water::GetTownsThatCanHaveDock(cargo, towns = AITownList()) {
         splitted.AddList(towns);
         splitted.RemoveTop(i);
         splitted.KeepTop(50);
-        splitted.Valuate(_val_TownCanHaveDock, this.max_city_dock_distance, cargo);
+        splitted.Valuate(_val_TownCanHaveOrHasDock, this.max_city_dock_distance, cargo);
         splitted.RemoveValue(0);
         merged.AddList(splitted);
     }
@@ -183,12 +183,18 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, use_canals, mo
     /* Build infrastructure. */
     WaitToHaveEnoughMoney(dock1.EstimateCost());
     if(dock1.Build() == -1) {
-        AILog.Error("Failed to build dock: " + AIError.GetLastErrorString());
+        local err_str = AIError.GetLastErrorString();
+        local x = AIMap.GetTileX(dock1.tile);
+        local y = AIMap.GetTileY(dock1.tile);
+        AILog.Error("Failed to build the dock at (" + x + "," + y + "): " + err_str);
         return false;
     }
     WaitToHaveEnoughMoney(dock2.EstimateCost());
     if(dock2.Build() == -1) {
-        AILog.Error("Failed to build dock: " + AIError.GetLastErrorString());
+        local err_str = AIError.GetLastErrorString();
+        local x = AIMap.GetTileX(dock2.tile);
+        local y = AIMap.GetTileY(dock2.tile);
+        AILog.Error("Failed to build the dock at (" + x + "," + y + "): " + err_str);
         return false;
     }
     WaitToHaveEnoughMoney(pf.EstimateCanalsCost());
@@ -206,7 +212,7 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, use_canals, mo
     }
     local vehicle = BuildShip(depot, cargo, pf.Length() * 2, monthly_production);
     if(!AIVehicle.IsValidVehicle(vehicle)) {
-        AILog.Error("Failed to build ship for " + dock1.GetName() + "-" + dock2.GetName() + " route");
+        AILog.Error("Failed to build the ship for " + dock1.GetName() + "-" + dock2.GetName() + " route");
         return false;
     }
  

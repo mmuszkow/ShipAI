@@ -18,13 +18,14 @@ function Industry::GetName() {
         return AIIndustry.GetName(this.id) + "(acceptor)";
 }
 
-function Industry::GetNearbyCoastTiles() {
+function Industry::GetNearbyBuildableCoastTiles() {
     local tiles;
     local radius = AIStation.GetCoverageRadius(AIStation.STATION_DOCK);
     if(this.is_producer)
         tiles = AITileList_IndustryProducing(this.id, radius);
     else
         tiles = AITileList_IndustryAccepting(this.id, radius);
+    /* AITile.IsCoastTile returns only buildable tiles. */
     tiles.Valuate(AITile.IsCoastTile);
     tiles.KeepValue(1);
     tiles.Valuate(_val_IsDockCapable);
@@ -32,8 +33,8 @@ function Industry::GetNearbyCoastTiles() {
     return tiles;
 }
 
-function Industry::GetNearestCoastTile() {
-    local tiles = GetNearbyCoastTiles();
+function Industry::GetNearestBuildableCoastTile() {
+    local tiles = GetNearbyBuildableCoastTiles();
     if(tiles.IsEmpty())
         return -1;
     tiles.Valuate(AIMap.DistanceManhattan, AIIndustry.GetLocation(this.id));
@@ -150,22 +151,22 @@ function Industry::GetPossiblePorts() {
 }
 
 /* Checks all 4 sides of the industry, returns true if any port location is found. */
-function Industry::CanHaveLandPort() {
+function Industry::CanHaveLandPortBuilt() {
     for(local orientation = 0; orientation <= 3; orientation++)
         if(GetPossiblePortTile(orientation) != -1)
             return true;
     return false;
 }
 
-function Industry::CanHaveDock() {
-    return   AIIndustry.HasDock(this.id) || 
-            !GetNearbyCoastTiles().IsEmpty() ||
-            (AreCanalsAllowed() && CanHaveLandPort());
+function Industry::CanHaveDockBuilt() {
+    return  !GetNearbyBuildableCoastTiles().IsEmpty() ||
+            (AreCanalsAllowed() && CanHaveLandPortBuilt());
 }
 
 /* Valuator. */
-function _val_IndustryCanHaveDock(industry, is_producer) {
-    return Industry(industry, is_producer).CanHaveDock();
+function _val_IndustryCanHaveOrHasDock(industry_id, is_producer) {
+    local industry = Industry(industry_id, is_producer);
+    return industry.GetExistingDock() != null || industry.CanHaveDockBuilt();
 }
 
 function Industry::GetExistingDock() {
