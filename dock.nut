@@ -395,11 +395,7 @@ function Dock::_BuildWaterDepot(depot) {
     }
 }
 
-/* Builds water depot. */
-function Dock::BuildWaterDepot() {
-    if(this.is_landdock)
-        return _BuildWaterDepot(_GetLandDockDepotLocation());   
- 
+function Dock::_GetPossibleWaterDepotLocations() {
     local depotarea = AITileList();
     SafeAddRectangle(depotarea, this.tile, 5);
     depotarea.RemoveItem(this.tile);
@@ -412,6 +408,22 @@ function Dock::BuildWaterDepot() {
     depotarea.Valuate(AIMap.DistanceManhattan, this.tile);
     depotarea.KeepAboveValue(3);
     depotarea.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING); 
+    return depotarea;
+}
+
+function Dock::CanHaveWaterDepotBuilt() {
+    if(this.is_landdock)
+        return true;
+
+    return !_GetPossibleWaterDepotLocations().IsEmpty();
+}
+
+/* Builds water depot. */
+function Dock::BuildWaterDepot() {
+    if(this.is_landdock)
+        return _BuildWaterDepot(_GetLandDockDepotLocation());   
+ 
+    local depotarea = _GetPossibleWaterDepotLocations();
     for(local depot = depotarea.Begin(); !depotarea.IsEnd(); depot = depotarea.Next())
         if(_BuildWaterDepot(depot) != -1)
             return depot;

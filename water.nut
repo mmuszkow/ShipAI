@@ -141,9 +141,9 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, use_canals, mo
     if(dist < this.min_distance || dist > this.max_distance)
         return false;
    
-    /* If we already have a vehicle serving this route, we just clone it. */ 
     local depot = dock1.FindWaterDepot();
     if(depot != -1) {
+        /* If we already have a vehicle serving this route, we just clone it. */ 
         local existing_vehicle = FindVehicleServingRoute(dock1, dock2, depot, cargo);
         if(existing_vehicle != -1) {
             /* If the existing vehicle brings only losses/minimal gain it means that route is not worth it. */
@@ -174,7 +174,8 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, use_canals, mo
 
             return true;
         }
-    } 
+    } else if(!dock1.CanHaveWaterDepotBuilt()) /* if we cannot build the depot, we won't be able to built the ship. */
+        return false;
 
     /* No possible water connection. */
     if(!pf.FindPath(dock1, dock2, this.max_path_len, this.max_parts, use_canals))
