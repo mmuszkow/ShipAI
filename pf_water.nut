@@ -236,9 +236,12 @@ function WaterPathfinder::BuildCanals() {
  * old coast, generic A*, canal estimate x 10: 3184 days, 196 paths 
  * old coast, inline A* , canal estimate x 5 : 3164 days, 205 paths 
  * new coast, generic A*, canal estimate x 5 : 3098 days, 240 paths 
+ * new coast, Fibonacci A*,canal estimate x 5: 3046 days, 240 paths 
  *
  * generic A* vs inline A*: inlining and removing unused functions from Graph.Aystar.6
- * doesn't bring any major performance gain (and everybody is doing that in their AIs...)
+ * doesn't bring any major performance gain (despite everybody doing that in their AIs...)
+ * 
+ * binary heap vs Fibonacci heap in A*: almost no performance gain
  *
  * old vs new coast: old was following water tiles next to coast, new is following coast tiles
  */

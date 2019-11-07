@@ -1,5 +1,3 @@
-require("utils.nut");
-
 class CoastPathfinder { 
     path = [];
 };
@@ -163,14 +161,20 @@ function CoastPathfinder::Path::Estimate() {
         return -1;
     }
 
-    /* Check if it is still a coast tile, unfortunately
-       any constructions on coast make it stop being a coast ... */
-    /*if(!AITile.IsCoastTile(this._tile) && 
-       (!AIBridge.IsBridgeTile(this._tile) || AITile.IsBuildable(this._tile))) {
+
+    /* We should check if the next tile is a cost tile, however...
+     * AITile.IsCoastTile doesn't work for bridge, buildings and roads
+     * as it introduces some additional checks, see the code below:
+     * src/script/api/script_tile.cpp:70
+	 * return (::IsTileType(tile, MP_WATER) && ::IsCoast(tile)) ||
+	 *     (::IsTileType(tile, MP_TREES) && ::GetTreeGround(tile) == TREE_GROUND_SHORE);
+     * 
+     * This will eliminate at least the slopes on the map edges. */
+    if(AIMap.DistanceFromEdge(this._tile) <= 1) {
         this._tile = -1;
         this.path = [];
         return -1;
-    }*/
+    }
 
     /* We looped. */
     if(this._tile == this.source) {
@@ -195,6 +199,7 @@ function CoastPathfinder::Path::Estimate() {
         this.path = [];
         return -1;
     }
+
     return estimate;
 }
 
@@ -257,7 +262,7 @@ function CoastPathfinder::GetWaterAdjacentToCoastPath(path) {
         if(adj == -1)
             continue;
         
-        /* Don't place put the tile twice. */
+        /* Don't put the same tile twice. */
         if(water_path.len() > 0 && water_path.top() == adj)
             continue;
            

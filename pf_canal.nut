@@ -14,6 +14,8 @@ class CanalPathfinder {
     constructor() {
         _aystar_class = import("graph.aystar", "", 6);
         _aystar = _aystar_class(this, this._Cost, this._Estimate, this._Neighbours, this._CheckDirection);
+        // not worth it, there is almost no performance gain
+        //_aystar._queue_class = import("queue.fibonacci_heap", "", 3);
     }
 }
 
