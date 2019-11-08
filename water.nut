@@ -113,22 +113,20 @@ function Water::BuildShip(depot, cargo, round_trip_distance, monthly_production)
 }
 
 function Water::FindVehicleServingRoute(dock1, dock2, depot, cargo) {
-    local station1 = AIStation.GetStationID(dock1.tile);
-    if(!AIStation.IsValidStation(station1))
-        return -1;
+    if(!dock1.IsValidStation() || !dock2.IsValidStation())
+        return -1; 
 
-    local station2 = AIStation.GetStationID(dock2.tile);
-    if(!AIStation.IsValidStation(station2))
-        return -1;
-
-    local vehicles = AIVehicleList_Station(station1);
-    vehicles.KeepList(AIVehicleList_Station(station2));
+    local vehicles = dock1.GetVehicles();
+    vehicles.KeepList(dock2.GetVehicles());
     vehicles.KeepList(AIVehicleList_Depot(depot));
     vehicles.Valuate(AIVehicle.GetCapacity, cargo);
     vehicles.KeepAboveValue(0);
     if(vehicles.IsEmpty())
         return -1;
-    
+   
+    /* Return the one with the lowest profit last year as we check this value later. */
+    vehicles.Valuate(AIVehicle.GetProfitLastYear);
+    vehicles.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
     return vehicles.Begin();
 }
 
@@ -188,6 +186,8 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, use_canals, mo
         local x = AIMap.GetTileX(dock1.tile);
         local y = AIMap.GetTileY(dock1.tile);
         AILog.Error("Failed to build the dock at (" + x + "," + y + "): " + err_str);
+        //local front = GetHillFrontTile(dock1.tile, 1);
+        //AISign.BuildSign(dock1.tile, "road?: " + AITile.HasTransportType(front, AITile.TRANSPORT_ROAD));
         return false;
     }
     WaitToHaveEnoughMoney(dock2.EstimateCost());
@@ -196,6 +196,8 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, use_canals, mo
         local x = AIMap.GetTileX(dock2.tile);
         local y = AIMap.GetTileY(dock2.tile);
         AILog.Error("Failed to build the dock at (" + x + "," + y + "): " + err_str);
+        //local front = GetHillFrontTile(dock2.tile, 1);
+        //AISign.BuildSign(dock2.tile, "road?: " + AITile.HasTransportType(front, AITile.TRANSPORT_ROAD));
         return false;
     }
     WaitToHaveEnoughMoney(pf.EstimateCanalsCost());

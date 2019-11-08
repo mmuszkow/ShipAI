@@ -188,13 +188,21 @@ function _val_IsDockCapable(tile) {
        AITile.GetSlope(front2) != AITile.SLOPE_FLAT)
         return false;
 
-    return AITile.IsWaterTile(front1) && !AIBridge.IsBridgeTile(front1) &&
-        AITile.IsWaterTile(front2) && !AIMarine.IsWaterDepotTile(front2);
+    /* TODO: we should check if front1 is not a bridge somehow
+     * AITile.IsBuildable doesn't work for water
+     * AIBridge.IsBridge tile works only for bridge's start/end
+     * AIBridge.GetBridgeID precondition is that AIBridge.IsBridge returns true
+     * AIRoad.IsRoadTile returns false (I didn't try it on land..)
+     * AITile.HasTransportType same
+     */
+    return AITile.IsWaterTile(front1) && AITile.IsWaterTile(front2) && 
+          !AIMarine.IsWaterDepotTile(front2);
 }
 
 /* Should be used only for sea */
 function _val_IsWaterDepotCapable(tile, orientation) {
-    if(!AITile.IsWaterTile(tile) || AITile.GetMaxHeight(tile) > 0 || AIBridge.IsBridgeTile(tile))
+    /* TODO: we should somehow check if it is not a bridge tile */
+    if(!AITile.IsWaterTile(tile) || AITile.GetMaxHeight(tile) > 0)
         return false;
     
     /* back is the depot tile, front is the tile in front of the depot,
@@ -434,6 +442,11 @@ function Dock::BuildWaterDepot() {
     return -1;
 }
 
+function Dock::IsCargoAccepted(cargo) {
+    return AITile.GetCargoAcceptance(this.tile, cargo, 1, 1,
+               AIStation.GetCoverageRadius(AIStation.STATION_DOCK)) > 7; /* as doc says */
+}
+
 /* True if this dock had serviced specific cargo at some point. */
 function Dock::HadOperatedCargo(cargo) {
     return AIStation.HasCargoRating(GetStationID(), cargo);
@@ -441,5 +454,35 @@ function Dock::HadOperatedCargo(cargo) {
 
 function Dock::GetCargoWaiting(cargo) {
     return AIStation.GetCargoWaiting(GetStationID(), cargo);
+}
+
+function Dock::GetVehicles() {
+    return AIVehicleList_Station(GetStationID());
+}
+
+function Dock::GetDemolitionCost() {
+    if(this.is_offshore)
+        return 0;
+
+    if(this.is_landdock)
+        return 10 * AITile.GetBuildCost(AITile.BT_CLEAR_HOUSE);
+
+    return 2 * AITile.GetBuildCost(AITile.BT_CLEAR_HOUSE);
+}
+
+function Dock::Demolish() {
+    if(!IsValidStation())
+        return false;
+
+    if(this.is_offshore)
+        return true;
+
+    if(this.is_landdock) {
+        foreach(land_tile in GetOccupiedTiles())
+            if(land_tile != this.tile && land_tile != GetHillFrontTile(this.tile, 1))
+                AITile.DemolishTile(land_tile);
+    }
+
+    return AITile.DemolishTile(this.tile);
 }
 

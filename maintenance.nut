@@ -7,7 +7,9 @@ class Maintenance {
     _sell_group = -1;
     /* Last time when maintenance was performed. */
     _maintenance_last_performed = AIDate.GetCurrentDate();
-    
+    /* List of station tiles from unprofitable vehicles. */
+    _unprofitable_stations = AITileList();
+ 
     constructor() {
         /* Autorenew vehicles when old. */
         AICompany.SetAutoRenewMonths(0);
@@ -76,8 +78,14 @@ function Maintenance::SellUnprofitable() {
     unprofitable.KeepAboveValue(1095); /* 3 years old minimum */
     unprofitable.Valuate(AIVehicle.IsValidVehicle);
     unprofitable.KeepValue(1);
+
     for(local vehicle = unprofitable.Begin(); !unprofitable.IsEnd(); vehicle = unprofitable.Next()) {
-       
+  
+        /* Mark station as possibly unprofitable. */ 
+        for(local order = 0; order < AIOrder.GetOrderCount(vehicle); order++)
+            if(AIOrder.IsGotoStationOrder(vehicle, order))
+                _unprofitable_stations.AddTile(AIOrder.GetOrderDestination(vehicle, order));
+
         /* We can't use AIVehicle.SendToDepot here because it chooses the closest depot,
          * not always the one on our route. */
         local current_order = AIOrder.ResolveOrderPosition(vehicle, AIOrder.ORDER_CURRENT);
@@ -147,9 +155,63 @@ function Maintenance::Upgrade() {
     return marked_for_upgrade;
 }
 
+/* Destroys stations not accepting any cargo to save on maintenance costs. */
+function Maintenance::DemolishGhostStations() {
+    local cargos = AICargoList();
+    local demolished = AITileList();
+    for(local station_tile = _unprofitable_stations.Begin(); !_unprofitable_stations.IsEnd(); station_tile = _unprofitable_stations.Next()) {
+
+        /* Check if is still valid. */
+        local dock = Dock(station_tile);
+        if(!dock.IsValidStation()) {
+            demolished.AddTile(station_tile);
+            continue;
+        }
+
+        /* Some vehicles still have station in their's orders, so we cannot destroy it. */
+        if(!dock.GetVehicles().IsEmpty())
+            continue;
+
+        /* Check if station is accepting any cargo. */
+        local no_cargo_accepted = true;
+        for(local cargo = cargos.Begin(); !cargos.IsEnd(); cargo = cargos.Next()) {
+            if(dock.IsCargoAccepted(cargo)) {
+                no_cargo_accepted = false;
+                break;
+            }
+        }
+        if(!no_cargo_accepted)
+            continue;
+ 
+        /* Demolition costs. */
+        if(AICompany.GetBankBalance(AICompany.COMPANY_SELF) -
+           AICompany.GetQuarterlyExpenses(AICompany.COMPANY_SELF, AICompany.CURRENT_QUARTER) <
+           2 * dock.GetDemolitionCost()) {
+            _unprofitable_stations.RemoveList(demolished);
+            return demolished.Count();
+        }
+
+        /* Demolish. */
+        local station_name = dock.GetName();
+        if(dock.Demolish()) {
+            demolished.AddTile(dock.tile);
+            AILog.Info(station_name + " dock has been demolished");
+        } else {
+            local err_str = AIError.GetLastErrorString();
+            local x = AIMap.GetTileX(dock.tile);
+            local y = AIMap.GetTileY(dock.tile);
+            AILog.Error("Failed to demolish the dock at (" + x + "," + y + "): " + err_str);
+        }
+
+    }
+    _unprofitable_stations.RemoveList(demolished);
+    return demolished.Count();
+}
+
 function Maintenance::Perform() {
     local unprofitable_sold = this.SellUnprofitable();
     local upgrading = this.Upgrade();
+    this.DemolishGhostStations();
     if(unprofitable_sold > 0)
         AILog.Info("Unprofitable vehicles sold: " + unprofitable_sold);
     if(upgrading > 0)
