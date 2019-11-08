@@ -66,8 +66,8 @@ function Ferry::BuildFerryRoutes() {
         /* If there is already a dock in the city and there 
            are not many passengers waiting there, there is no point
            in opening a new route. */
-        if(dock1 != null && AIStation.GetCargoWaiting(
-            AIStation.GetStationID(dock1.tile), this._passenger_cargo_id) < 2 * min_capacity)
+        if(dock1 != null && dock1.HadServicedCargo(this._passenger_cargo_id) &&
+           dock1.GetCargoWaiting(this._passenger_cargo_id) < 2 * min_capacity)
             continue;
 
         /* Find a city suitable for connection closest to ours. */

@@ -83,9 +83,15 @@ function Freight::BuildTownFreightRoutes() {
             
             local dock1 = producer.GetExistingDock();
 
+            /* If there is already a dock serving the producer but there is not much cargo waiting,
+               there is no point in opening a new route. */
+            if(dock1 != null && dock1.HadServicedCargo(cargo) &&
+               dock1.GetCargoWaiting(cargo) < 2 * min_capacity)
+                continue;
+
             /* No dock, but there is a suitable coast nearby. */
             if(dock1 == null) {
-                local coast1 = producer.GetNearestCoastTile();
+                local coast1 = producer.GetNearestBuildableCoastTile();
                 if(coast1 != -1)
                     dock1 = Dock(coast1);
             }
@@ -189,7 +195,13 @@ function Freight::BuildIndustryFreightRoutes() {
                 continue;
             
             local dock1 = producer.GetExistingDock();
-            
+ 
+            /* If there is already a dock serving the producer but there is not much cargo waiting,
+               there is no point in opening a new route. */
+            if(dock1 != null && dock1.HadServicedCargo(cargo) &&
+               dock1.GetCargoWaiting(cargo) < 2 * min_capacity)
+                continue;
+           
             /* No dock, but there is a suitable coast nearby. */
             if(dock1 == null) {
                 local coast1 = producer.GetNearestBuildableCoastTile();

@@ -81,19 +81,12 @@ function Maintenance::SellUnprofitable() {
         /* We can't use AIVehicle.SendToDepot here because it chooses the closest depot,
          * not always the one on our route. */
         local current_order = AIOrder.ResolveOrderPosition(vehicle, AIOrder.ORDER_CURRENT);
-        local order_count = AIOrder.GetOrderCount(vehicle);
         local depot = AIOrder.GetOrderDestination(vehicle, 0);
         local buoys = []; 
 
-        /* Depending on where we are on our route, we either go back or continue going. */
-        if(current_order < order_count / 2) {
-            for(local order = 1; order < current_order; order++)
-                buoys.append(AIOrder.GetOrderDestination(vehicle, order));
-            buoys.reverse();
-        } else {
-            for(local order = current_order; order < order_count; order++)
-                buoys.append(AIOrder.GetOrderDestination(vehicle, order));
-        }
+        /* This way we ensure that we will be able to get back from where we started. */
+        for(local order = current_order - 1; order >= 1; order--)
+            buoys.append(AIOrder.GetOrderDestination(vehicle, order));
 
         /* We can be sharing orders with other ships, so we need to clean previous ones. */
         AIOrder.UnshareOrders(vehicle);
@@ -173,7 +166,6 @@ function Maintenance::Perform() {
         AILog.Info("Unprofitable vehicles sold: " + unprofitable_sold);
     if(upgraded > 0)
         AILog.Info("Ships sent for upgrading: " + upgraded);
-    
     this._maintenance_last_performed = AIDate.GetCurrentDate();
 }
 

@@ -63,6 +63,10 @@ function Dock::IsValidStation() {
     return AIStation.IsValidStation(AIStation.GetStationID(this.tile));
 }
 
+function Dock::GetStationID() {
+    return AIStation.GetStationID(this.tile);
+}
+
 function Dock::GetName() {
     return AIStation.GetName(AIStation.GetStationID(this.tile));
 }
@@ -430,9 +434,12 @@ function Dock::BuildWaterDepot() {
     return -1;
 }
 
-function Dock::GetCargoWaiting(cargo) {
-    local station_id = AIStation.GetStationID(this.tile);
-    if(!AIStation.IsValidStation(station_id) || !AIStation.HasCargoRating(station_id, cargo))
-        return 0;
-    return AIStation.GetCargoWaiting(station_id, cargo)
+/* True if this dock had serviced specific cargo at some point. */
+function Dock::HadServicedCargo(cargo) {
+    return AIStation.HasCargoRating(GetStationID(), cargo);
 }
+
+function Dock::GetCargoWaiting(cargo) {
+    return AIStation.GetCargoWaiting(GetStationID(), cargo);
+}
+

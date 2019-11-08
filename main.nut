@@ -56,8 +56,8 @@ function ShipAI::Start() {
            (AICompany.GetBankBalance(AICompany.COMPANY_SELF) - 
             AICompany.GetQuarterlyExpenses(AICompany.COMPANY_SELF, AICompany.CURRENT_QUARTER) -
             2 * AICompany.GetLoanInterval() > AICompany.GetLoanAmount())) {
-            AICompany.SetLoanAmount(0);
-            AILog.Info("Loan repaid");
+            if(AICompany.SetLoanAmount(0))
+                AILog.Info("Loan repaid");
         }
         
         /* Build statues if we have a lot of money left, they increase the stations ratings. */
@@ -171,7 +171,7 @@ function ShipAI::PlantTreesIfRich() {
         if(AIDate.GetCurrentDate() - start > 90)
             return planted;        
         
-        local area = Town(town_id).GetArea();
+        local area = Town(town_id).GetInfluencedArea();
         area.Valuate(AITile.IsBuildable);
         area.KeepValue(1);
         area.Valuate(AIBase.RandItem);

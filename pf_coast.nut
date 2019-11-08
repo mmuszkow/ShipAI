@@ -150,7 +150,7 @@ function CoastPathfinder::Path::Estimate() {
     /* We reached the target. */
     if(this._tile == this.goal)
         return 0;
-    
+   
     /* Get the next tile. */
     if(this._go_right)
         this._tile = _GoRight(this._tile);
@@ -160,29 +160,38 @@ function CoastPathfinder::Path::Estimate() {
         this.path = [];
         return -1;
     }
-
-
-    /* We should check if the next tile is a cost tile, however...
-     * AITile.IsCoastTile doesn't work for bridge, buildings and roads
-     * as it introduces some additional checks, see the code below:
-     * src/script/api/script_tile.cpp:70
-	 * return (::IsTileType(tile, MP_WATER) && ::IsCoast(tile)) ||
-	 *     (::IsTileType(tile, MP_TREES) && ::GetTreeGround(tile) == TREE_GROUND_SHORE);
-     * 
-     * This will eliminate at least the slopes on the map edges. */
-    if(AIMap.DistanceFromEdge(this._tile) <= 1) {
-        this._tile = -1;
-        this.path = [];
-        return -1;
-    }
-
+ 
     /* We looped. */
     if(this._tile == this.source) {
         this._tile = -1;
         this.path = [];
         return -1;
     }
+   
+    /* We should check if the tile is a coast tile, however...
+     * AITile.IsCoastTile doesn't work for bridges, buildings and roads
+     * src/script/api/script_tile.cpp:70
+	 * return (::IsTileType(tile, MP_WATER) && ::IsCoast(tile)) ||
+	 *     (::IsTileType(tile, MP_TREES) && ::GetTreeGround(tile) == TREE_GROUND_SHORE);
+     */
 
+    /* This will eliminate the slopes on the map edges (we can't get around those). */
+    if(AIMap.DistanceFromEdge(this._tile) <= 1) {
+        this._tile = -1;
+        this.path = [];
+        return -1;
+    }
+
+    /* This will eliminate "dry" valleys, where coast tiles are in front eachother. */
+    local front = GetHillFrontTile(this._tile, 1); // returns -1 for non-simple slopes
+    if(front != -1 && AITile.GetSlope(this._tile) == AITile.GetComplementSlope(AITile.GetSlope(front))) {
+        // in theory we could continue from here, but I don't want to risk looping
+        //this._tile = front;
+        this._tile = -1;
+        this.path = [];
+        return -1;
+    }
+ 
     /* Add next and check if path length is within limit. */
     this.path.push(this._tile);
     if(this.path.len() > this._max_len) {
