@@ -79,10 +79,8 @@ function Ferry::BuildFerryRoutes() {
                     local radius = AIStation.GetCoverageRadius(AIStation.STATION_DOCK);
                     local best_prod = AITile.GetCargoAcceptance(best_spot, this._passenger_cargo_id, 1, 1, radius);
                     local existing_prod = AITile.GetCargoAcceptance(dock1.tile, this._passenger_cargo_id, 1, 1, radius);
-                    if(best_prod > existing_prod) {
-                        AILog.Info("Trying to use better spot for dock in " + town.GetName());
+                    if(best_prod > existing_prod)
                         dock1.tile = best_spot;
-                    }
                 }
             }
         }

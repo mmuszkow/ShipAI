@@ -103,7 +103,7 @@ function Maintenance::SellUnprofitable() {
 
 /* Replaces model with better model, if possible. */
 function Maintenance::Upgrade() {   
-    local sent_to_upgrade = 0;
+    local marked_for_upgrade = 0;
     local min_balance = AICompany.GetAutoRenewMoney(AICompany.COMPANY_SELF);
     
     local cargos = AICargoList();
@@ -137,35 +137,23 @@ function Maintenance::Upgrade() {
             if( AICompany.GetBankBalance(AICompany.COMPANY_SELF) -
                 AICompany.GetQuarterlyExpenses(AICompany.COMPANY_SELF, AICompany.CURRENT_QUARTER) < 
                 double_price + min_balance)
-                return sent_to_upgrade;
+                return marked_for_upgrade;
             
             AIGroup.SetAutoReplace(AIGroup.GROUP_DEFAULT, current_model, better_model);
-            //AILog.Info("Replacing " + AIEngine.GetName(current_model) + " with " + AIEngine.GetName(better_model));
-            
-            /* We need to send the vehicle to depot to be replaced but we should do this only when the vehicle is close to the depot (1st or last order). */
-            local last_order = AIOrder.GetOrderCount(vehicle) - 1;
-            local current_order = AIOrder.ResolveOrderPosition(vehicle, AIOrder.ORDER_CURRENT);
-            if(current_order == 0 || current_order == 1 || current_order == last_order) {
-                if(!AIOrder.IsGotoDepotOrder(vehicle, AIOrder.ORDER_CURRENT)) {
-                    if(AIVehicle.SendVehicleToDepotForServicing(vehicle))
-                        sent_to_upgrade++;
-                    else
-                        AILog.Error("Failed to send the vehicle for servicing: " + AIError.GetLastErrorString());
-                }
-            }
+            marked_for_upgrade++;
         }
     }
 
-    return sent_to_upgrade;
+    return marked_for_upgrade;
 }
 
 function Maintenance::Perform() {
     local unprofitable_sold = this.SellUnprofitable();
-    local upgraded = this.Upgrade();
+    local upgrading = this.Upgrade();
     if(unprofitable_sold > 0)
         AILog.Info("Unprofitable vehicles sold: " + unprofitable_sold);
-    if(upgraded > 0)
-        AILog.Info("Ships sent for upgrading: " + upgraded);
+    if(upgrading > 0)
+        AILog.Info("Ships marked for upgrading: " + upgrading);
     this._maintenance_last_performed = AIDate.GetCurrentDate();
 }
 
