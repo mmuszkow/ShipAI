@@ -33,8 +33,6 @@ function Town::GetBestCargoAcceptingBuildableCoastTile(range, cargo) {
     local tiles = GetCargoAcceptingBuildableCoastTiles(range, cargo);
     if(tiles.IsEmpty())
         return -1;
-    tiles.Valuate(AITile.GetCargoAcceptance, cargo, 1, 1,
-                  AIStation.GetCoverageRadius(AIStation.STATION_DOCK));
     tiles.Sort(AIList.SORT_BY_VALUE, AIList.SORT_DESCENDING);
     return tiles.Begin();
 }
@@ -46,17 +44,29 @@ function _val_TownCanHaveOrHasDock(town_id, range, cargo) {
           !town.GetCargoAcceptingBuildableCoastTiles(range, cargo).IsEmpty();
 }
 
+/* Returns existing dock with biggest cargo acceptance. */
 function Town::GetExistingDock(cargo) {
-    local radius = AIStation.GetCoverageRadius(AIStation.STATION_DOCK);
-    local docks = AIStationList(AIStation.STATION_DOCK);
-    docks.Valuate(AIStation.GetNearestTown);
-    docks.KeepValue(this.id);    
-    for(local dock = docks.Begin(); !docks.IsEnd(); dock = docks.Next()) {
-        local dock_loc = AIStation.GetLocation(dock);
-        if(AITile.GetCargoAcceptance(dock_loc, cargo, 1, 1, radius) > 7)
-            return Dock(dock_loc);
-    }
-    return null;
+    local stations = AIStationList(AIStation.STATION_DOCK);
+    stations.Valuate(AIStation.GetNearestTown);
+    stations.KeepValue(this.id);
+
+    /* We need to get each station tile, as there is no function
+     * to determine if station is accepting a specific cargo.
+     * AIStation.HasCargoRating is not enough, as it is true
+     * only if the specific cargo was taken from the station
+     * at least once. Also, Dock class takes tile, not ID as 
+     * the argument in constructor. */
+    local docks = AITileList();
+    for(local station_id = stations.Begin(); !stations.IsEnd(); station_id = stations.Next())
+        docks.AddItem(AIStation.GetLocation(station_id), 0);
+
+    /* Sort by acceptance. */
+    docks.Valuate(AITile.GetCargoAcceptance, cargo, 1, 1, AIStation.GetCoverageRadius(AIStation.STATION_DOCK));
+    docks.KeepAboveValue(7); /* as doc says */
+    if(docks.IsEmpty())
+        return null;
+    docks.Sort(AIList.SORT_BY_VALUE, AIList.SORT_DESCENDING);
+    return Dock(docks.Begin());
 }
 
 function Town::GetMonthlyProduction(cargo) {

@@ -63,12 +63,29 @@ function Ferry::BuildFerryRoutes() {
         if(town.GetMonthlyProduction(this._passenger_cargo_id) <= min_capacity)
             continue;
         
-        /* If there is already a dock in the city and there 
-           are not many passengers waiting there, there is no point
-           in opening a new route. */
-        if(dock1 != null && dock1.HadServicedCargo(this._passenger_cargo_id) &&
-           dock1.GetCargoWaiting(this._passenger_cargo_id) < 2 * min_capacity)
-            continue;
+        if(dock1 != null) {
+            if(dock1.HadOperatedCargo(this._passenger_cargo_id)) {
+                /* If there is already an operated dock in the city and there 
+                 * are not many passengers waiting there, there is no point
+                 * in opening a new route. */
+                if(dock1.GetCargoWaiting(this._passenger_cargo_id) < 2 * min_capacity)
+                    continue;
+            } else {
+                /* We may have built a dock nearby city for a different cargo,
+                 * which accept passengers but is far away from city center.
+                 * Let's try to look for a better location. */
+                local best_spot = town.GetBestCargoAcceptingBuildableCoastTile(this.max_city_dock_distance, this._passenger_cargo_id);
+                if(best_spot != -1 && AIMap.DistanceManhattan(dock1.tile, best_spot) > 5) {
+                    local radius = AIStation.GetCoverageRadius(AIStation.STATION_DOCK);
+                    local best_prod = AITile.GetCargoAcceptance(best_spot, this._passenger_cargo_id, 1, 1, radius);
+                    local existing_prod = AITile.GetCargoAcceptance(dock1.tile, this._passenger_cargo_id, 1, 1, radius);
+                    if(best_prod > existing_prod) {
+                        AILog.Info("Trying to use better spot for dock in " + town.GetName());
+                        dock1.tile = best_spot;
+                    }
+                }
+            }
+        }
 
         /* Find a city suitable for connection closest to ours. */
         local towns2 = AIList();

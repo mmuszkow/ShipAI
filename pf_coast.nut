@@ -182,15 +182,13 @@ function CoastPathfinder::Path::Estimate() {
         return -1;
     }
 
-    /* This will eliminate "dry" valleys, where coast tiles are in front eachother. */
+    /* This will eliminate "dry" valleys, where coast tiles are in front eachother.
+     * By setting the tile to the tile in front, we should be able to continue going the coast. 
+     * In theory, this shouldn't cause a loop.
+     */
     local front = GetHillFrontTile(this._tile, 1); // returns -1 for non-simple slopes
-    if(front != -1 && AITile.GetSlope(this._tile) == AITile.GetComplementSlope(AITile.GetSlope(front))) {
-        // in theory we could continue from here, but I don't want to risk looping
-        //this._tile = front;
-        this._tile = -1;
-        this.path = [];
-        return -1;
-    }
+    if(front != -1 && AITile.GetSlope(this._tile) == AITile.GetComplementSlope(AITile.GetSlope(front)))
+        this._tile = front;
  
     /* Add next and check if path length is within limit. */
     this.path.push(this._tile);

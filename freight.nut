@@ -85,7 +85,7 @@ function Freight::BuildTownFreightRoutes() {
 
             /* If there is already a dock serving the producer but there is not much cargo waiting,
                there is no point in opening a new route. */
-            if(dock1 != null && dock1.HadServicedCargo(cargo) &&
+            if(dock1 != null && dock1.HadOperatedCargo(cargo) &&
                dock1.GetCargoWaiting(cargo) < 2 * min_capacity)
                 continue;
 
@@ -198,7 +198,7 @@ function Freight::BuildIndustryFreightRoutes() {
  
             /* If there is already a dock serving the producer but there is not much cargo waiting,
                there is no point in opening a new route. */
-            if(dock1 != null && dock1.HadServicedCargo(cargo) &&
+            if(dock1 != null && dock1.HadOperatedCargo(cargo) &&
                dock1.GetCargoWaiting(cargo) < 2 * min_capacity)
                 continue;
            

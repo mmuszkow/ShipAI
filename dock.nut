@@ -435,7 +435,7 @@ function Dock::BuildWaterDepot() {
 }
 
 /* True if this dock had serviced specific cargo at some point. */
-function Dock::HadServicedCargo(cargo) {
+function Dock::HadOperatedCargo(cargo) {
     return AIStation.HasCargoRating(GetStationID(), cargo);
 }
 

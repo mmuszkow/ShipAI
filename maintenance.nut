@@ -140,7 +140,7 @@ function Maintenance::Upgrade() {
                 return sent_to_upgrade;
             
             AIGroup.SetAutoReplace(AIGroup.GROUP_DEFAULT, current_model, better_model);
-            AILog.Info("Replacing " + AIEngine.GetName(current_model) + " with " + AIEngine.GetName(better_model));
+            //AILog.Info("Replacing " + AIEngine.GetName(current_model) + " with " + AIEngine.GetName(better_model));
             
             /* We need to send the vehicle to depot to be replaced but we should do this only when the vehicle is close to the depot (1st or last order). */
             local last_order = AIOrder.GetOrderCount(vehicle) - 1;
