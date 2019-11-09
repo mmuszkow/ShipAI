@@ -6,7 +6,11 @@ class Dock {
     orientation = -1;
     is_landdock = false;
     is_offshore = false;
-    
+   
+    /* Don't use too big value here, it may cause the depots on the other
+     * waterbody to be chosen. */
+    max_depot_distance = 5; 
+ 
     constructor(dock, artificial_orientation = -1, _is_offshore = false) {
         this.tile = dock;
         this.is_offshore = _is_offshore;
@@ -205,56 +209,56 @@ function _val_IsWaterDepotCapable(tile, orientation) {
     if(!AITile.IsWaterTile(tile) || AITile.GetMaxHeight(tile) > 0)
         return false;
     
-    /* back is the depot tile, front is the tile in front of the depot,
+    /* depot is the 2nd depot tile, front is the tile in front of the depot,
      * left/right are side tiles. */
-    local back, front, left1, left2, right1, right2;
+    local depot2, front, left1, left2, right1, right2;
     switch(orientation) {
         /* West. */
         case 0:
-            back = tile + EAST;
-            front = tile + WEST;
+            depot2 = tile + WEST;
+            front = depot2 + WEST;
             left1 = tile + SOUTH;
-            left2 = tile + SOUTH;
+            left2 = depot2 + SOUTH;
             right1 = tile + NORTH;
-            right2 = tile + NORTH;
+            right2 = depot2 + NORTH;
             break;
         /* South. */
         case 1:
-            back = tile + NORTH;
-            front = tile + SOUTH;
+            depot2 = tile + SOUTH;
+            front = depot2 + SOUTH;
             left1 = tile + EAST;
-            left2 = tile + EAST;
+            left2 = depot2 + EAST;
             right1 = tile + WEST;
-            right2 = tile + WEST;
+            right2 = depot2 + WEST;
             break;
         /* North. */
         case 2:
-            back = tile + SOUTH;
-            front = tile + NORTH;
+            depot2 = tile + NORTH;
+            front = depot2 + NORTH;
             left1 = tile + WEST;
-            left2 = tile + WEST;
+            left2 = depot2 + WEST;
             right1 = tile + EAST;
-            right2 = tile + EAST;
+            right2 = depot2 + EAST;
             break;
         /* East. */
         default:
-            back = tile + WEST;
-            front = tile + EAST;
+            depot2 = tile + WEST;
+            front = depot2 + EAST;
             left1 = tile + NORTH;
-            left2 = tile + NORTH;
+            left2 = depot2 + NORTH;
             right1 = tile + SOUTH;
-            right2 = tile + SOUTH;
+            right2 = depot2 + SOUTH;
             break;
     }
     
     /* Must have at least one exit and shouldn't block
        any infrastructure on the sides (like dock or lock). */
-    return AITile.IsWaterTile(back) && !AIBridge.IsBridgeTile(back) &&
-           AITile.IsWaterTile(front) && AITile.IsWaterTile(left1) &&
-           AITile.IsWaterTile(left2) && AITile.IsWaterTile(right1) &&
-           AITile.IsWaterTile(right2) && !AIMarine.IsLockTile(left1) &&
-           !AIMarine.IsLockTile(left2) && !AIMarine.IsLockTile(right1) &&
-           !AIMarine.IsLockTile(right2);
+    return AITile.IsWaterTile(depot2) && AITile.IsWaterTile(front) &&
+           AITile.IsWaterTile(left1) && AITile.IsWaterTile(left2) &&
+           AITile.IsWaterTile(right1) && AITile.IsWaterTile(right2) &&
+           !AIMarine.IsLockTile(depot2) && !AIMarine.IsLockTile(front) &&
+           !AIMarine.IsLockTile(left1) && !AIMarine.IsLockTile(left2) &&
+           !AIMarine.IsLockTile(right1) && !AIMarine.IsLockTile(right2);
 }
 
 function Dock::EstimateCost() {
@@ -347,16 +351,16 @@ function Dock::_GetLandDockDepotLocation() {
     switch(this.orientation) {
         /* West. */ 
         case 0:
-            return this.tile + AIMap.GetTileIndex(2, -1);
+            return this.tile + WEST + NORTH;
         /* South. */
         case 1:
-            return this.tile + AIMap.GetTileIndex(1, 2);
-            /* North. */
+            return this.tile + SOUTH + WEST;
+        /* North. */
         case 2:
-            return this.tile + AIMap.GetTileIndex(-1, -2);
-            /* East. */ 
+            return this.tile + NORTH + EAST;
+        /* East. */ 
         default:
-            return this.tile + AIMap.GetTileIndex(-2, 1);
+            return this.tile + EAST + SOUTH;
     }
 }
 
@@ -373,7 +377,7 @@ function Dock::FindWaterDepot() {
     /* Let's look nearby. */
     local depots = AIDepotList(AITile.TRANSPORT_WATER);
     depots.Valuate(AIMap.DistanceMax, this.tile);
-    depots.KeepBelowValue(7);
+    depots.KeepBelowValue(this.max_depot_distance + 1);
     if(depots.IsEmpty())
         return -1;
     depots.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
@@ -384,24 +388,22 @@ function Dock::_BuildWaterDepot(depot) {
     switch(this.orientation) {
         /* West. */
         case 0:
-            /* BuildWaterDepot has some weird direction interpretation. */
-            if(AIMarine.BuildWaterDepot(depot + EAST, depot + WEST))
+            if(AIMarine.BuildWaterDepot(depot, depot + WEST))
                 return depot;
             return -1;
         /* South. */
         case 1:
-            /* BuildWaterDepot has some weird direction interpretation. */
-            if(AIMarine.BuildWaterDepot(depot + NORTH, depot + SOUTH))
+            if(AIMarine.BuildWaterDepot(depot, depot + SOUTH))
                 return depot;
             return -1;
         /* North. */
         case 2:
-            if(AIMarine.BuildWaterDepot(depot, depot + NORTH))
+            if(AIMarine.BuildWaterDepot(depot + NORTH, depot))
                 return depot;
             return -1;
         /* East. */
         default:
-            if(AIMarine.BuildWaterDepot(depot, depot + EAST))
+            if(AIMarine.BuildWaterDepot(depot + EAST, depot))
                 return depot;
             return -1;
     }
@@ -409,16 +411,45 @@ function Dock::_BuildWaterDepot(depot) {
 
 function Dock::_GetPossibleWaterDepotLocations() {
     local depotarea = AITileList();
-    SafeAddRectangle(depotarea, this.tile, 5);
+    SafeAddRectangle(depotarea, this.tile, this.max_depot_distance);
     depotarea.RemoveItem(this.tile);
     if(!this.is_offshore) {
-        depotarea.RemoveItem(GetHillFrontTile(this.tile, 1));
-        depotarea.RemoveItem(GetHillFrontTile(this.tile, 2));
+        /* We need to make sure we don't block the entry to the dock,
+         * dock front, front and side entry tiles are removed from the list. */
+        switch(this.orientation) {
+            /* West. */
+            case 0:
+                depotarea.RemoveItem(this.tile + WEST);
+                depotarea.RemoveItem(this.tile + WEST + WEST);
+                depotarea.RemoveItem(this.tile + WEST + WEST + NORTH);
+                depotarea.RemoveItem(this.tile + WEST + WEST + SOUTH);
+                break;
+            /* South. */
+            case 1:
+                depotarea.RemoveItem(this.tile + SOUTH);
+                depotarea.RemoveItem(this.tile + SOUTH + SOUTH);
+                depotarea.RemoveItem(this.tile + SOUTH + SOUTH + WEST);
+                depotarea.RemoveItem(this.tile + SOUTH + SOUTH + EAST);
+                break;
+            /* North. */
+            case 2:
+                depotarea.RemoveItem(this.tile + NORTH);
+                depotarea.RemoveItem(this.tile + NORTH + NORTH);
+                depotarea.RemoveItem(this.tile + NORTH + NORTH + WEST);
+                depotarea.RemoveItem(this.tile + NORTH + NORTH + EAST);
+                break;
+            /* East. */
+            case 3:
+                depotarea.RemoveItem(this.tile + EAST);
+                depotarea.RemoveItem(this.tile + EAST + EAST);
+                depotarea.RemoveItem(this.tile + EAST + EAST + NORTH);
+                depotarea.RemoveItem(this.tile + EAST + EAST + SOUTH);
+                break;
+        }
     }
     depotarea.Valuate(_val_IsWaterDepotCapable, this.orientation);
     depotarea.KeepValue(1);
     depotarea.Valuate(AIMap.DistanceManhattan, this.tile);
-    depotarea.KeepAboveValue(3);
     depotarea.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING); 
     return depotarea;
 }

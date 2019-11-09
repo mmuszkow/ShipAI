@@ -121,8 +121,8 @@ function CoastPathfinder::Path::_GoLeft(tile) {
                slope == AITile.SLOPE_STEEP_S)
                 return next;
             return -1;
-        case AITile.SLOPE_N:
         case AITile.SLOPE_NE:
+        case AITile.SLOPE_N:
         case AITile.SLOPE_SEN:
         case AITile.SLOPE_STEEP_E:
             next = tile + NORTH;
@@ -152,10 +152,13 @@ function CoastPathfinder::Path::Estimate() {
         return 0;
    
     /* Get the next tile. */
-    if(this._go_right)
+    if(this._go_right) {
         this._tile = _GoRight(this._tile);
-    else
+        //if(this._tile != -1) AISign.BuildSign(this._tile, "r");
+    } else {
         this._tile = _GoLeft(this._tile);
+        //if(this._tile != -1) AISign.BuildSign(this._tile, "l");
+    }
     if(this._tile == -1) {
         this.path = [];
         return -1;
@@ -168,13 +171,6 @@ function CoastPathfinder::Path::Estimate() {
         return -1;
     }
    
-    /* We should check if the tile is a coast tile, however...
-     * AITile.IsCoastTile doesn't work for bridges, buildings and roads
-     * src/script/api/script_tile.cpp:70
-	 * return (::IsTileType(tile, MP_WATER) && ::IsCoast(tile)) ||
-	 *     (::IsTileType(tile, MP_TREES) && ::GetTreeGround(tile) == TREE_GROUND_SHORE);
-     */
-
     /* This will eliminate the slopes on the map edges (we can't get around those). */
     if(AIMap.DistanceFromEdge(this._tile) <= 1) {
         this._tile = -1;
