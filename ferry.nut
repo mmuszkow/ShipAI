@@ -77,6 +77,9 @@ function Ferry::BuildFerryRoutes() {
                 local best_spot = town.GetBestCargoAcceptingBuildableCoastTile(this.max_city_dock_distance, this._passenger_cargo_id);
                 if(best_spot != -1 && AIMap.DistanceManhattan(dock1.tile, best_spot) > 5) {
                     local radius = AIStation.GetCoverageRadius(AIStation.STATION_DOCK);
+                    /* We use acceptance here because the passenger cargo is symmetric.
+                     * This means - the more "passenger" tiles dock has in it's radius,
+                     * the more passenger production it will have. */
                     local best_prod = AITile.GetCargoAcceptance(best_spot, this._passenger_cargo_id, 1, 1, radius);
                     local existing_prod = AITile.GetCargoAcceptance(dock1.tile, this._passenger_cargo_id, 1, 1, radius);
                     if(best_prod > existing_prod)

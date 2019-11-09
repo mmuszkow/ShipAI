@@ -442,11 +442,6 @@ function Dock::BuildWaterDepot() {
     return -1;
 }
 
-function Dock::IsCargoAccepted(cargo) {
-    return AITile.GetCargoAcceptance(this.tile, cargo, 1, 1,
-               AIStation.GetCoverageRadius(AIStation.STATION_DOCK)) > 7; /* as doc says */
-}
-
 /* True if this dock had serviced specific cargo at some point. */
 function Dock::HadOperatedCargo(cargo) {
     return AIStation.HasCargoRating(GetStationID(), cargo);
@@ -465,7 +460,8 @@ function Dock::GetDemolitionCost() {
         return 0;
 
     if(this.is_landdock)
-        return 10 * AITile.GetBuildCost(AITile.BT_CLEAR_HOUSE);
+        return 8 * AITile.GetBuildCost(AITile.BT_CLEAR_HOUSE) + 
+               3 * AITile.GetBuildCost(AITile.BT_TERRAFORM);
 
     return 2 * AITile.GetBuildCost(AITile.BT_CLEAR_HOUSE);
 }
@@ -478,9 +474,58 @@ function Dock::Demolish() {
         return true;
 
     if(this.is_landdock) {
-        foreach(land_tile in GetOccupiedTiles())
-            if(land_tile != this.tile && land_tile != GetHillFrontTile(this.tile, 1))
-                AITile.DemolishTile(land_tile);
+        switch(this.orientation) {
+            case 0:
+                /* To the West. */
+                local ret = AITile.DemolishTile(this.tile);
+                AITile.DemolishTile(GetHillFrontTile(this.tile, 1));
+                AITile.DemolishTile(GetHillFrontTile(this.tile, 2));
+                AITile.DemolishTile(this.tile + AIMap.GetTileIndex(1, -1));
+                AITile.DemolishTile(this.tile + AIMap.GetTileIndex(2, -1));
+                AITile.DemolishTile(this.tile + AIMap.GetTileIndex(3, -1));
+                AITile.DemolishTile(this.tile + AIMap.GetTileIndex(3, 0));
+                if(AITile.GetSlope(this.tile) == AITile.SLOPE_NE)
+                    AITile.LowerTile(this.tile, AITile.SLOPE_NE);
+                return ret;;
+            case 1:
+                /* To the South. */
+                local ret = AITile.DemolishTile(this.tile);
+                AITile.DemolishTile(GetHillFrontTile(this.tile, 1));
+                AITile.DemolishTile(GetHillFrontTile(this.tile, 2));
+                AITile.DemolishTile(this.tile + AIMap.GetTileIndex(1, 1));
+                AITile.DemolishTile(this.tile + AIMap.GetTileIndex(1, 2));
+                AITile.DemolishTile(this.tile + AIMap.GetTileIndex(1, 3));
+                AITile.DemolishTile(this.tile + AIMap.GetTileIndex(0, 3));
+                if(AITile.GetSlope(this.tile) == AITile.SLOPE_NW)
+                    AITile.LowerTile(this.tile, AITile.SLOPE_NW);
+                return ret;
+            case 2:
+                /* To the North. */
+                local ret = AITile.DemolishTile(this.tile);
+                AITile.DemolishTile(GetHillFrontTile(this.tile, 1));
+                AITile.DemolishTile(GetHillFrontTile(this.tile, 2));
+                AITile.DemolishTile(this.tile + AIMap.GetTileIndex(-1, -1));
+                AITile.DemolishTile(this.tile + AIMap.GetTileIndex(-1, -2));
+                AITile.DemolishTile(this.tile + AIMap.GetTileIndex(-1, -3));
+                AITile.DemolishTile(this.tile + AIMap.GetTileIndex(0, -3));
+                if(AITile.GetSlope(this.tile) == AITile.SLOPE_SE)
+                    AITile.LowerTile(this.tile, AITile.SLOPE_SE);
+                return ret;
+            case 3:
+                /* To the East. */
+                local ret = AITile.DemolishTile(this.tile);
+                AITile.DemolishTile(GetHillFrontTile(this.tile, 1));
+                AITile.DemolishTile(GetHillFrontTile(this.tile, 2));
+                AITile.DemolishTile(this.tile + AIMap.GetTileIndex(-1, 1));
+                AITile.DemolishTile(this.tile + AIMap.GetTileIndex(-2, 1));
+                AITile.DemolishTile(this.tile + AIMap.GetTileIndex(-3, 1));
+                AITile.DemolishTile(this.tile + AIMap.GetTileIndex(-3, 0));
+                if(AITile.GetSlope(this.tile) == AITile.SLOPE_SW)
+                    AITile.LowerTile(this.tile, AITile.SLOPE_SW);
+                return ret;
+            default:
+                return false;
+        }
     }
 
     return AITile.DemolishTile(this.tile);

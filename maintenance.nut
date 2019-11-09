@@ -155,10 +155,11 @@ function Maintenance::Upgrade() {
     return marked_for_upgrade;
 }
 
-/* Destroys stations not accepting any cargo to save on maintenance costs. */
+/* Destroys stations not accepting or offering any cargo to save on maintenance costs. */
 function Maintenance::DemolishGhostStations() {
     local cargos = AICargoList();
     local demolished = AITileList();
+    local radius = AIStation.GetCoverageRadius(AIStation.STATION_DOCK);
     for(local station_tile = _unprofitable_stations.Begin(); !_unprofitable_stations.IsEnd(); station_tile = _unprofitable_stations.Next()) {
 
         /* Check if is still valid. */
@@ -172,15 +173,17 @@ function Maintenance::DemolishGhostStations() {
         if(!dock.GetVehicles().IsEmpty())
             continue;
 
-        /* Check if station is accepting any cargo. */
-        local no_cargo_accepted = true;
+        /* Check if the dock is accepting/offering any cargo. */
+        local no_cargo = true;
+        local radius = AIStation.GetCoverageRadius(AIStation.STATION_DOCK);
         for(local cargo = cargos.Begin(); !cargos.IsEnd(); cargo = cargos.Next()) {
-            if(dock.IsCargoAccepted(cargo)) {
-                no_cargo_accepted = false;
+            if(AITile.GetCargoAcceptance(dock.tile, cargo, 1, 1, radius) > 7 ||
+               AITile.GetCargoProduction(dock.tile, cargo, 1, 1, radius) > 0) {
+                no_cargo = false;
                 break;
             }
         }
-        if(!no_cargo_accepted)
+        if(!no_cargo)
             continue;
  
         /* Demolition costs. */
