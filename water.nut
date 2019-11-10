@@ -186,8 +186,6 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, use_canals, mo
         local x = AIMap.GetTileX(dock1.tile);
         local y = AIMap.GetTileY(dock1.tile);
         AILog.Error("Failed to build the dock at (" + x + "," + y + "): " + err_str);
-        //local front = GetHillFrontTile(dock1.tile, 1);
-        //AISign.BuildSign(dock1.tile, "road?: " + AITile.HasTransportType(front, AITile.TRANSPORT_ROAD));
         return false;
     }
     WaitToHaveEnoughMoney(dock2.EstimateCost());
@@ -196,8 +194,6 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, use_canals, mo
         local x = AIMap.GetTileX(dock2.tile);
         local y = AIMap.GetTileY(dock2.tile);
         AILog.Error("Failed to build the dock at (" + x + "," + y + "): " + err_str);
-        //local front = GetHillFrontTile(dock2.tile, 1);
-        //AISign.BuildSign(dock2.tile, "road?: " + AITile.HasTransportType(front, AITile.TRANSPORT_ROAD));
         return false;
     }
     WaitToHaveEnoughMoney(pf.EstimateCanalsCost());

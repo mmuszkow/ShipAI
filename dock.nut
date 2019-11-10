@@ -38,26 +38,31 @@ class Dock {
                     case AITile.SLOPE_NE:
                         /* West. */
                         this.orientation = 0;
+                        if(AIMarine.IsCanalTile(this.tile + WEST + WEST))
+                            this.is_landdock = true;
                         break;
                     case AITile.SLOPE_NW:
                         /* South. */
                         this.orientation = 1;
+                        if(AIMarine.IsCanalTile(this.tile + SOUTH + SOUTH))
+                            this.is_landdock = true;
                         break;
                     case AITile.SLOPE_SE:
                         /* North. */
+                        if(AIMarine.IsCanalTile(this.tile + NORTH + NORTH))
+                            this.is_landdock = true;
                         this.orientation = 2;
                         break;
                     case AITile.SLOPE_SW:
                         /* East. */
+                        if(AIMarine.IsCanalTile(this.tile + EAST + EAST))
+                            this.is_landdock = true;
                         this.orientation = 3;
                         break;
                     default:
                         this.orientation = -1;
                         break;
                 }
-                
-                if(this.orientation != -1 && AIMarine.IsCanalTile(GetHillFrontTile(this.tile, 2)))
-                    this.is_landdock = true;
             }
         }
     }

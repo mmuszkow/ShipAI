@@ -124,8 +124,8 @@ function CanalPathfinder::FindPath(start, end, max_distance, land_ignored, sea_i
     local lock1 = -1;
     local lock2 = -1;
     
-    /* Pathfinder operated on land only, if we are on the sealevel or the
-       coast where the lock should be is blocked, we need to find a place to put the lock. */
+    /* Pathfinder operates on land only, if we are on the sealevel or the
+       coast where the lock should be built is blocked, we need to find a place to put the lock. */
     if((AITile.GetMaxHeight(start) == 0) || ArrayContains(sea_ignored, start)) {
         lock1 = _FindAdjacentLockTile(start, end, sea_ignored);
         if(lock1 == -1)

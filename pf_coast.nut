@@ -27,9 +27,14 @@ function CoastPathfinder::Path::_GoRight(tile) {
     local slope = AITile.SLOPE_INVALID;
     switch(AITile.GetSlope(tile)) {
         case AITile.SLOPE_NW:
+        case AITile.SLOPE_N:
+            next = tile + SOUTH;
+            slope = AITile.GetSlope(next);
+            // in theory SE shouldn't occur for NW
+            if(slope == AITile.SLOPE_E || slope == AITile.SLOPE_SE)
+                return next;
         case AITile.SLOPE_STEEP_W:
         case AITile.SLOPE_NWS:
-        case AITile.SLOPE_N:
             next = tile + EAST;
             slope = AITile.GetSlope(next);
             if(slope == AITile.SLOPE_NW ||
@@ -39,9 +44,14 @@ function CoastPathfinder::Path::_GoRight(tile) {
                 return next;
             return -1;
         case AITile.SLOPE_SE:
+        case AITile.SLOPE_S:
+            next = tile + NORTH;
+            slope = AITile.GetSlope(next);
+            // in theory NW shouldn't occur for SE
+            if(slope == AITile.SLOPE_W || slope == AITile.SLOPE_NW)
+                return next;
         case AITile.SLOPE_STEEP_E:
         case AITile.SLOPE_SEN:
-        case AITile.SLOPE_S:
             next = tile + WEST;
             slope = AITile.GetSlope(next);
             if(slope == AITile.SLOPE_SE ||
@@ -51,9 +61,14 @@ function CoastPathfinder::Path::_GoRight(tile) {
                 return next;
             return -1;
         case AITile.SLOPE_SW:
+        case AITile.SLOPE_W:
+            next = tile + EAST;
+            slope = AITile.GetSlope(next);
+            // in theory NE shouldn't occur for SW
+            if(slope == AITile.SLOPE_N || slope == AITile.SLOPE_NE)
+                return next;
         case AITile.SLOPE_STEEP_S:
         case AITile.SLOPE_WSE:
-        case AITile.SLOPE_W:
             next = tile + NORTH;
             slope = AITile.GetSlope(next);
             if(slope == AITile.SLOPE_SW ||
@@ -63,9 +78,14 @@ function CoastPathfinder::Path::_GoRight(tile) {
                 return next;
             return -1;
         case AITile.SLOPE_NE:
+        case AITile.SLOPE_E:
+            next = tile + WEST;
+            slope = AITile.GetSlope(next);
+            // in theory SW shouldn't occur for NE
+            if(slope == AITile.SLOPE_S || slope == AITile.SLOPE_SW)
+                return next;
         case AITile.SLOPE_STEEP_N:
         case AITile.SLOPE_ENW:
-        case AITile.SLOPE_E:
             next = tile + SOUTH;
             slope = AITile.GetSlope(next);
             if(slope == AITile.SLOPE_NE ||
@@ -87,6 +107,11 @@ function CoastPathfinder::Path::_GoLeft(tile) {
     switch(AITile.GetSlope(tile)) {
         case AITile.SLOPE_NW:
         case AITile.SLOPE_W:
+            next = tile + SOUTH;
+            slope = AITile.GetSlope(next);
+            // in theory SE shouldn't occur for NW
+            if(slope == AITile.SLOPE_S || slope == AITile.SLOPE_SE)
+                return next;
         case AITile.SLOPE_ENW:
         case AITile.SLOPE_STEEP_N:
             next = tile + WEST;
@@ -99,6 +124,11 @@ function CoastPathfinder::Path::_GoLeft(tile) {
             return -1;
         case AITile.SLOPE_SE:
         case AITile.SLOPE_E:
+            next = tile + NORTH;
+            slope = AITile.GetSlope(next);
+            // in theory NW shouldn't occur for SE
+            if(slope == AITile.SLOPE_N || slope == AITile.SLOPE_NW)
+                return next;
         case AITile.SLOPE_WSE:
         case AITile.SLOPE_STEEP_S:
             next = tile + EAST;
@@ -111,6 +141,11 @@ function CoastPathfinder::Path::_GoLeft(tile) {
             return -1;
         case AITile.SLOPE_SW:
         case AITile.SLOPE_S:
+            next = tile + EAST;
+            slope = AITile.GetSlope(next);
+            // in theory NE shouldn't occur for SW
+            if(slope == AITile.SLOPE_E || slope == AITile.SLOPE_NE)
+                return next;
         case AITile.SLOPE_STEEP_W:
         case AITile.SLOPE_NWS:
             next = tile + SOUTH;
@@ -123,6 +158,11 @@ function CoastPathfinder::Path::_GoLeft(tile) {
             return -1;
         case AITile.SLOPE_NE:
         case AITile.SLOPE_N:
+            next = tile + WEST;
+            slope = AITile.GetSlope(next);
+            // in theory SW shouldn't occur for NE
+            if(slope == AITile.SLOPE_W || slope == AITile.SLOPE_SW)
+                return next;
         case AITile.SLOPE_SEN:
         case AITile.SLOPE_STEEP_E:
             next = tile + NORTH;
@@ -152,13 +192,10 @@ function CoastPathfinder::Path::Estimate() {
         return 0;
    
     /* Get the next tile. */
-    if(this._go_right) {
+    if(this._go_right)
         this._tile = _GoRight(this._tile);
-        //if(this._tile != -1) AISign.BuildSign(this._tile, "r");
-    } else {
+    else
         this._tile = _GoLeft(this._tile);
-        //if(this._tile != -1) AISign.BuildSign(this._tile, "l");
-    }
     if(this._tile == -1) {
         this.path = [];
         return -1;
@@ -178,14 +215,6 @@ function CoastPathfinder::Path::Estimate() {
         return -1;
     }
 
-    /* This will eliminate "dry" valleys, where coast tiles are in front eachother.
-     * By setting the tile to the tile in front, we should be able to continue going the coast. 
-     * In theory, this shouldn't cause a loop.
-     */
-    local front = GetHillFrontTile(this._tile, 1); // returns -1 for non-simple slopes
-    if(front != -1 && AITile.GetSlope(this._tile) == AITile.GetComplementSlope(AITile.GetSlope(front)))
-        this._tile = front;
- 
     /* Add next and check if path length is within limit. */
     this.path.push(this._tile);
     if(this.path.len() > this._max_len) {
