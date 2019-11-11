@@ -173,6 +173,14 @@ function Maintenance::DemolishGhostStations() {
         if(!dock.GetVehicles().IsEmpty())
             continue;
 
+        /* Landdocks have their depot demolished when the dock is demolished.
+         * We need to ensure no unprofitable vehicles are still heading to this depot. */
+        if(dock.is_landdock) {
+            local depot = dock.FindWaterDepot();
+            if(depot != -1 && !AIVehicleList_Depot(depot).IsEmpty())
+                continue;
+        }
+
         /* Check if the dock is accepting/offering any cargo. */
         local no_cargo = true;
         local radius = AIStation.GetCoverageRadius(AIStation.STATION_DOCK);

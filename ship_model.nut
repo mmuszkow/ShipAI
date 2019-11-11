@@ -42,7 +42,8 @@ function _val_VehicleModelHasProperCapacity(model, cargo, capacity_cache, distan
     local capacity = _val_GetVehicleModelCapacity(model, cargo, capacity_cache);
     //AILog.Info("Production: " + (travel_time_days * daily_production) + " travel time: " + travel_time_days);
     //AILog.Info(AIEngine.GetName(model) + " " + (travel_time_days * daily_production));
-    return capacity <= 300 && capacity <= travel_time_days * daily_production;
+    /* Why 400? Because bigger ships rarely get profitable. */
+    return capacity <= 400 && capacity <= travel_time_days * daily_production;
 }
 
 /* For finding the best vehicle model. */
@@ -104,10 +105,12 @@ function ShipModel::GetReplacementModel(model, cargo, capacity) {
     better.KeepValue(1);
     better.RemoveItem(model);
     better.Valuate(AIEngine.GetCapacity);
-    /* Models with 80-160% capacity and higher max speed. 
+    /* Models with 80-160% capacity and higher max speed, max 400 units. 
+       Why 400? Because bigger ships rarely get profitable.
        Why 160%? Cause it covers the standard ship GRFs...
        https://wiki.openttd.org/Ship_Comparison
      */
+    better.RemoveAboveValue(400);
     better.RemoveBelowValue((0.8 * capacity).tointeger());
     better.RemoveAboveValue((1.6 * capacity).tointeger());
     better.Valuate(AIEngine.GetMaxSpeed);

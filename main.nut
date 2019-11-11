@@ -1,3 +1,16 @@
+/* Missing API functionalities:
+ *
+ * AIEngine.GetCargoCapacity(engine, cargo)
+ * https://www.tt-forums.net/viewtopic.php?t=61021
+ *
+ * AIBridge.IsBridgePart(tile)
+ * https://www.tt-forums.net/viewtopic.php?f=65&t=62830
+ *
+ * BT_LOCK, BT_CANAL for AIMarine.GetBuildCost
+ * All other transport types have that.
+ *
+ */
+
 require("ferry.nut");
 require("freight.nut");
 require("utils.nut");
@@ -85,7 +98,7 @@ function _val_CanHaveHQ(tile) {
     return AITile.IsBuildable(tile) &&
            AITile.IsBuildable(tile + SOUTH) &&
            AITile.IsBuildable(tile + WEST) &&
-           AITile.IsBuildable(tile + AIMap.GetTileIndex(1, 1));
+           AITile.IsBuildable(tile + SOUTH + WEST);
 }
 
 function ShipAI::BuildHQ() {
