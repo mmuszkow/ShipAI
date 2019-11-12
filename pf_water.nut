@@ -1,5 +1,5 @@
-require("pf_canal.nut");
 require("pf_coast.nut");
+require("pf_canal.nut");
 
 class WaterPathfinder {
    

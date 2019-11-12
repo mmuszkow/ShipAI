@@ -1,3 +1,5 @@
+require("pf_coast.nut");
+require("lock.nut");
 require("utils.nut");
 
 class CanalPathfinder {
@@ -5,6 +7,9 @@ class CanalPathfinder {
     _aystar = null;
     _dest = -1;
     _max_length = 100;
+
+    /* max tiles left/right when we can place a lock (for reusing locks). */
+    _max_adj_lock = 5;
 
     _reuse_cost = 1;
     _canal_cost = 5;
@@ -19,11 +24,17 @@ class CanalPathfinder {
     }
 }
 
+function CanalPathfinder::UseInterLocks() {
+    return AIController.GetSetting("build_interlocks");
+}
+
+function CanalPathfinder::UseAqueducts() {
+    return AIController.GetSetting("build_aqueducts");
+}
+
 function _val_IsLockCapableCoast(tile, ignored) {
     if(!AITile.IsCoastTile(tile) || !IsSimpleSlope(tile))
         return false;
-    if(AIMarine.IsLockTile(tile))
-        return true;
     local front1 = GetHillFrontTile(tile, 1);
     local front2 = GetHillFrontTile(tile, 2);
     local back1 = GetHillBackTile(tile, 1);
@@ -42,72 +53,48 @@ function _val_IsLockCapableCoast(tile, ignored) {
 
 /* Finds a lock/possible lock tile next to the water tile. */
 function CanalPathfinder::_FindAdjacentLockTile(water, direction, ignored) {
-    /* Let's look for existing locks first. */
-    local tiles = AITileList();
-    SafeAddRectangle(tiles, water, 3);
-    tiles.Valuate(IsSimpleSlope);
-    tiles.KeepValue(1);
-    tiles.Valuate(AIMarine.IsLockTile);
-    tiles.KeepValue(1);
-    if(!tiles.IsEmpty()) {
-        tiles.Valuate(AIMap.DistanceManhattan, direction);
-        tiles.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
-        return tiles.Begin();
-    }
-
-    tiles = AITileList();
-    SafeAddRectangle(tiles, water, 3);
-    tiles.Valuate(_val_IsLockCapableCoast, ignored);
-    tiles.KeepValue(1);
-    tiles.Valuate(AIMap.DistanceManhattan, direction);
-    tiles.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
-    if(tiles.IsEmpty())
+    /* Get coast tile next to water. */
+    local adj = AITileList();
+    SafeAddRectangle(adj, water, 1);
+    adj.Valuate(AITile.GetSlope);
+    adj.RemoveValue(AITile.SLOPE_FLAT);
+    if(adj.IsEmpty())
         return -1;
-    return tiles.Begin();
-}
+    adj.Valuate(AIMap.DistanceManhattan, direction);
+    adj.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
+    local coast = adj.Begin();
 
-function CanalPathfinder::_LockGetExitSideTiles(lock) {
-    switch(AITile.GetSlope(lock)) {
-        case AITile.SLOPE_NE:
-            /* West */
-            return [lock + AIMap.GetTileIndex(-1, -1), lock + AIMap.GetTileIndex(-1, 1)];
-        case AITile.SLOPE_NW:
-            /* South. */
-            return [lock + AIMap.GetTileIndex(-1, -1), lock + AIMap.GetTileIndex(1, -1)];
-        case AITile.SLOPE_SE:
-            /* North. */
-            return [lock + AIMap.GetTileIndex(-1, 1), lock + AIMap.GetTileIndex(1, 1)];
-        case AITile.SLOPE_SW:
-            /* East. */
-            return [lock + AIMap.GetTileIndex(1, -1), lock + AIMap.GetTileIndex(1, 1)];
-        default:
-            return [];
+    /* Follow few tiles each way. */
+    local path_r = CoastPathfinder.Path(coast, direction, true, 999999);
+    local path_l = CoastPathfinder.Path(coast, direction, false, 999999);
+    local coastal = AITileList();
+    for(local i=0 ; i<this._max_adj_lock; i++) {
+        if(path_r.Estimate() > 0) coastal.AddTile(path_r._tile);
+        if(path_l.Estimate() > 0) coastal.AddTile(path_l._tile);
     }
-}
+    coastal.RemoveList(ignored);
+    if(coastal.IsEmpty())
+        return -1;
 
-function CanalPathfinder::_LockGetEntrySideTiles(lock) {
-    switch(AITile.GetSlope(lock)) {
-        case AITile.SLOPE_NE:
-            /* West */
-            return [lock + AIMap.GetTileIndex(1, -1), lock + AIMap.GetTileIndex(1, 1)];
-        case AITile.SLOPE_NW:
-            /* South. */
-            return [lock + AIMap.GetTileIndex(-1, 1), lock + AIMap.GetTileIndex(1, 1)];
-        case AITile.SLOPE_SE:
-            /* North. */
-            return [lock + AIMap.GetTileIndex(-1, -1), lock + AIMap.GetTileIndex(1, -1)];
-        case AITile.SLOPE_SW:
-            /* East. */
-            return [lock + AIMap.GetTileIndex(-1, -1), lock + AIMap.GetTileIndex(-1, 1)];
-        default:
-            return [];
+    /* Let's look for existing locks first. */
+    local locks = AITileList();
+    locks.AddList(coastal);
+    locks.Valuate(AIMarine.IsLockTile);
+    locks.KeepValue(1);
+    if(!locks.IsEmpty()) {
+        locks.Valuate(AIMap.DistanceManhattan, direction);
+        locks.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
+        return locks.Begin();
     }
-}
 
-/* There is no 'find' in Squirrel 2. */
-function ArrayContains(arr, elem) {
-    foreach(item in arr) if(item == elem) return true;
-    return false;
+    /* No locks? Take coast closest to direction. */
+    coastal.Valuate(_val_IsLockCapableCoast, ignored);
+    coastal.KeepValue(1);
+    coastal.Valuate(AIMap.DistanceManhattan, direction);
+    coastal.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
+    if(coastal.IsEmpty())
+        return -1;
+    return coastal.Begin();
 }
 
 function CanalPathfinder::FindPath(start, end, max_distance, land_ignored, sea_ignored) {
@@ -121,23 +108,29 @@ function CanalPathfinder::FindPath(start, end, max_distance, land_ignored, sea_i
     if(dist == -1 || dist > max_distance)
         return false;
 
-    local lock1 = -1;
-    local lock2 = -1;
-    
+    local lock1 = Lock(-1);
+    local lock2 = Lock(-1);
+
+    /* There is no array.find in Squirrel 2 so we convert it to AIList. */
+    local sea_ignored_list = AITileList();
+    foreach(tile in sea_ignored)
+        sea_ignored_list.AddTile(tile); 
+ 
     /* Pathfinder operates on land only, if we are on the sealevel or the
        coast where the lock should be built is blocked, we need to find a place to put the lock. */
-    if((AITile.GetMaxHeight(start) == 0) || ArrayContains(sea_ignored, start)) {
-        lock1 = _FindAdjacentLockTile(start, end, sea_ignored);
-        if(lock1 == -1)
+    if((AITile.GetMaxHeight(start) == 0) || sea_ignored_list.HasItem(start)) {
+        lock1.tile = _FindAdjacentLockTile(start, end, sea_ignored_list);
+        if(lock1.tile == -1)
             return false;
 
         /* Locks cannot be entered from sides. */
-        sea_ignored.extend(_LockGetEntrySideTiles(lock1));
-        land_ignored.extend(_LockGetExitSideTiles(lock1));
+        foreach(tile in lock1.GetLowerSideTiles())
+            sea_ignored_list.AddTile(tile);
+        land_ignored.extend(lock1.GetUpperSideTiles());
 
         /* We start after leaving the lock. */
-        land_ignored.push(GetHillBackTile(lock1, 1));
-        start = GetHillBackTile(lock1, 2);
+        land_ignored.push(lock1.GetUpperTile());
+        start = lock1.GetUpperWaterTile();
     
     } else if(AIMarine.IsDockTile(start)) { /* height > 0 */
         /* Because we compare height in next step, we need to ensure we have the proper tile. */
@@ -147,15 +140,16 @@ function CanalPathfinder::FindPath(start, end, max_distance, land_ignored, sea_i
     }
     
     /* Do the same for the destination tile. */
-    if((AITile.GetMaxHeight(end) == 0) || ArrayContains(sea_ignored, end)) {
-        lock2 = _FindAdjacentLockTile(end, start, sea_ignored);
-        if(lock2 == -1)
+    if((AITile.GetMaxHeight(end) == 0) || sea_ignored_list.HasItem(end)) {
+        lock2.tile = _FindAdjacentLockTile(end, start, sea_ignored_list);
+        if(lock2.tile == -1)
             return false;
 
-        sea_ignored.extend(_LockGetEntrySideTiles(lock2));
-        land_ignored.extend(_LockGetExitSideTiles(lock2));
-        land_ignored.push(GetHillBackTile(lock2, 1));
-        end = GetHillBackTile(lock2, 2);
+        foreach(tile in lock2.GetLowerSideTiles())
+            sea_ignored_list.AddTile(tile);
+        land_ignored.extend(lock2.GetUpperSideTiles());
+        land_ignored.push(lock2.GetUpperTile());
+        end = lock2.GetUpperWaterTile();
     } else if(AIMarine.IsDockTile(end)) {
         local dock = Dock(end);
         if(dock.is_landdock)
@@ -175,14 +169,14 @@ function CanalPathfinder::FindPath(start, end, max_distance, land_ignored, sea_i
     local tmp_path = this._aystar.FindPath(10000);
     if(tmp_path == false || tmp_path == null)
         return false;
-    if(lock2 != -1)
-        this.path.append(lock2);
+    if(lock2.tile != -1)
+        this.path.append(lock2.tile);
     while(tmp_path != null) {
         this.path.append(tmp_path.GetTile());
         tmp_path = tmp_path.GetParent();
     }
-    if(lock1 != -1)
-        this.path.append(lock1);
+    if(lock1.tile != -1)
+        this.path.append(lock1.tile);
     this.path.reverse();
     
     return true;
@@ -202,7 +196,9 @@ function CanalPathfinder::_Cost(self, path, new_tile, new_direction) {
 }
 
 function CanalPathfinder::_Estimate(self, cur_tile, cur_direction, goal_tiles) {
-    return AIMap.DistanceManhattan(cur_tile, self._dest) * self._canal_cost;
+    /* Result of this function can be multiplied by value greater than 1 to 
+     * get results faster, but they won't be optimal */
+    return AIMap.DistanceManhattan(cur_tile, self._dest);
 }
 
 function CanalPathfinder::_Neighbours(self, path, cur_node) {
