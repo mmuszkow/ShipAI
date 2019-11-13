@@ -10,6 +10,7 @@ class WaterPathfinder {
     paths = [];
     is_canal = [];
     has_canal = false;
+    infrastructure = []; /* canal infrastructure */
 
     coast_pf = CoastPathfinder();
     canal_pf = CanalPathfinder();
@@ -29,6 +30,7 @@ function WaterPathfinder::_IsWater(tile) {
 
 function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts, use_canals) {
     this.paths = [];
+    this.infrastructure = [];
     this.is_canal = [];
     this.has_canal = false;
     local start = dock1.GetPfTile(dock2.tile);
@@ -84,17 +86,17 @@ function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts, use_ca
         return false;
 
     /* Canal pathfinder must not go over dock tiles, same goes for locks. */
-    local land_ignored = [];
-    local sea_ignored = [];
+    local land_ignored = AITileList();
+    local sea_ignored = AITileList();
     if(build_canals) {
         if(dock1.is_landdock)
-            land_ignored.extend(dock1.GetOccupiedTiles());
+            land_ignored.AddList(dock1.GetOccupiedTiles());
         else if(!dock1.is_offshore)
-            sea_ignored.extend(dock1.GetOccupiedTiles());
+            sea_ignored.AddList(dock1.GetOccupiedTiles());
         if(dock2.is_landdock)
-            land_ignored.extend(dock2.GetOccupiedTiles());
+            land_ignored.AddList(dock2.GetOccupiedTiles());
         else if(!dock2.is_offshore)
-            sea_ignored.extend(dock2.GetOccupiedTiles());
+            sea_ignored.AddList(dock2.GetOccupiedTiles());
     }
 
     /* Try to avoid obstacles */
@@ -117,6 +119,7 @@ function WaterPathfinder::FindPath(dock1, dock2, max_path_len, max_parts, use_ca
                 this.paths.push(canal_pf.path);
                 this.is_canal.push(true);
                 this.has_canal = true;
+                this.infrastructure.extend(canal_pf.infrastructure);
                 len_so_far += canal_pf.path.len();
             } else
                 return false;
@@ -204,7 +207,36 @@ function WaterPathfinder::BuildCanals() {
     if(!this.has_canal)
         return true;
 
+    /* Can be any bridge type, cost is always the same for aqueducts. */
+    local bridge_id = AIBridgeList().Begin();
     local i = 0;
+    foreach(inf in this.infrastructure) {
+        if(!inf.Exists()) {
+            if(inf instanceof Aqueduct) {
+                if(!AIBridge.BuildBridge(AIVehicle.VT_WATER, bridge_id, inf.edge1, inf.edge2)) {
+                    local err_str = AIError.GetLastErrorString();
+                    local x = AIMap.GetTileX(inf.edge1);
+                    local y = AIMap.GetTileY(inf.edge1);
+                    AILog.Error("Failed to build aqueduct at (" + x + "," + y + "): " + err_str);
+                    return false;
+                } else {
+                    local middle = inf.GetMiddleTile();
+                    local town_name = AITown.GetName(AITile.GetClosestTown(middle));
+                    AISign.BuildSign(middle, town_name + " Aqueduct");
+                }
+            } else {
+                if(!AIMarine.BuildLock(inf.tile)) {
+                    local err_str = AIError.GetLastErrorString();
+                    local x = AIMap.GetTileX(inf.tile);
+                    local y = AIMap.GetTileY(inf.tile);
+                    AILog.Error("Failed to build lock at (" + x + "," + y + "): " + err_str);
+                    return false;
+                }
+            }
+        }
+    }
+
+    local our_company_id = AICompany.ResolveCompanyID(AICompany.COMPANY_SELF);
     foreach(path in this.paths) {
         if(this.is_canal[i]) {
             foreach(tile in path) {
@@ -212,13 +244,28 @@ function WaterPathfinder::BuildCanals() {
                    AIMarine.IsCanalTile(tile) || AIMarine.IsBuoyTile(tile) ||
                    AIMarine.IsLockTile(tile))
                     continue;
-
-                if(IsSimpleSlope(tile)) {
-                    if(!AIMarine.BuildLock(tile))
+                
+                /* If something was built there when while we we planning the path - try demolishing it. */
+                if(!AITile.IsBuildable(tile) && AITile.GetOwner(tile) != our_company_id) {
+                    if(!AITile.DemolishTile(tile)) {
+                        local err_str = AIError.GetLastErrorString();
+                        local x = AIMap.GetTileX(tile);
+                        local y = AIMap.GetTileY(tile);
+                        AILog.Error("Failed to clean land to build canal at (" + x + "," + y + "): " + err_str);
                         return false;
-                } else {
-                    if(!AIMarine.BuildCanal(tile))
-                        return false;
+                    }
+                    
+                    /* Why no check for return value here? Because even after demolishing the tile and
+                     * successfully building the canal, BuildCanal returns ERR_AREA_NOT_CLEAR.
+                     * There is some delay probably. */
+                    AIMarine.BuildCanal(tile);
+            
+                } else if(!AIMarine.BuildCanal(tile)) {
+                    local err_str = AIError.GetLastErrorString();
+                    local x = AIMap.GetTileX(tile);
+                    local y = AIMap.GetTileY(tile);
+                    AILog.Error("Failed to build canal at (" + x + "," + y + "): " + err_str);
+                    return false;
                 }
             }
         }

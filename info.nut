@@ -11,32 +11,13 @@ class ShipAI extends AIInfo {
     function GetSettings() {
         AddSetting({
             name = "build_canals",
-            description = "Build canals",
+            description = "Build canal infrastructure",
             easy_value = 1,
             medium_value = 1,
             hard_value = 1,
             custom_value = 1,
             flags = CONFIG_BOOLEAN | CONFIG_INGAME
         });
-        AddSetting({
-            name = "build_interlocks",
-            description = "Build locks between canals",
-            easy_value = 0,
-            medium_value = 0,
-            hard_value = 0,
-            custom_value = 0,
-            flags = CONFIG_BOOLEAN | CONFIG_INGAME
-        });
-        AddSetting({
-            name = "build_aqueducts",
-            description = "Build aqueducts",
-            easy_value = 0,
-            medium_value = 0,
-            hard_value = 0,
-            custom_value = 0,
-            flags = CONFIG_BOOLEAN | CONFIG_INGAME
-        });
-
     }
 }
 

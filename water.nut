@@ -197,10 +197,8 @@ function Water::BuildAndStartShip(dock1, dock2, cargo, full_load, use_canals, mo
         return false;
     }
     WaitToHaveEnoughMoney(pf.EstimateCanalsCost());
-    if(!pf.BuildCanals()) {
-        AILog.Error("Failed to build the canal for " + dock1.GetName() + "-" + dock2.GetName() + " route: " + AIError.GetLastErrorString());
+    if(!pf.BuildCanals())
         return false;
-    }
     if(depot == -1) {
         WaitToHaveEnoughMoney(AIMarine.GetBuildCost(AIMarine.BT_DEPOT));
         depot = dock1.BuildWaterDepot();

@@ -126,60 +126,60 @@ function Dock::GetPfTile(dest = -1) {
 }
 
 function Dock::GetOccupiedTiles() {
-    local tiles = [];
-    tiles.append(this.tile);
+    local tiles = AITileList();
+    tiles.AddTile(this.tile);
     switch(orientation) {
         case 0:
             /* West */
-            tiles.append(this.tile + AIMap.GetTileIndex(1, 0));
+            tiles.AddTile(this.tile + AIMap.GetTileIndex(1, 0));
             if(this.is_landdock) {        
-                tiles.append(this.tile + AIMap.GetTileIndex(-1, 0));
-                tiles.append(this.tile + AIMap.GetTileIndex(0, 1));
-                tiles.append(this.tile + AIMap.GetTileIndex(0, -1));
-                tiles.append(this.tile + AIMap.GetTileIndex(-1, -1));
-                tiles.append(this.tile + AIMap.GetTileIndex(-1, 1));
-                tiles.append(this.tile + AIMap.GetTileIndex(1, -1));
-                tiles.append(this.tile + AIMap.GetTileIndex(2, -1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(-1, 0));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(0, 1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(0, -1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(-1, -1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(-1, 1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(1, -1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(2, -1));
             }
             return tiles;
         case 1:
             /* South. */
-            tiles.append(this.tile + AIMap.GetTileIndex(0, 1));
+            tiles.AddTile(this.tile + AIMap.GetTileIndex(0, 1));
             if(this.is_landdock) {
-                tiles.append(this.tile + AIMap.GetTileIndex(0, -1));
-                tiles.append(this.tile + AIMap.GetTileIndex(-1, 0));
-                tiles.append(this.tile + AIMap.GetTileIndex(1, 0));
-                tiles.append(this.tile + AIMap.GetTileIndex(-1, -1));
-                tiles.append(this.tile + AIMap.GetTileIndex(1, -1));
-                tiles.append(this.tile + AIMap.GetTileIndex(1, 1));
-                tiles.append(this.tile + AIMap.GetTileIndex(1, 2));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(0, -1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(-1, 0));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(1, 0));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(-1, -1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(1, -1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(1, 1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(1, 2));
             }
             return tiles;
         case 2:
             /* North. */
-            tiles.append(this.tile + AIMap.GetTileIndex(0, -1));
+            tiles.AddTile(this.tile + AIMap.GetTileIndex(0, -1));
             if(this.is_landdock) {
-                tiles.append(this.tile + AIMap.GetTileIndex(0, 1));
-                tiles.append(this.tile + AIMap.GetTileIndex(-1, 0));
-                tiles.append(this.tile + AIMap.GetTileIndex(1, 0));
-                tiles.append(this.tile + AIMap.GetTileIndex(-1, 1));
-                tiles.append(this.tile + AIMap.GetTileIndex(0, 1));
-                tiles.append(this.tile + AIMap.GetTileIndex(1, 1));
-                tiles.append(this.tile + AIMap.GetTileIndex(-1, -2));
-                tiles.append(this.tile + AIMap.GetTileIndex(-1, -3));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(0, 1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(-1, 0));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(1, 0));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(-1, 1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(0, 1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(1, 1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(-1, -2));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(-1, -3));
             }
             return tiles;
         case 3:
             /* East. */
-            tiles.append(this.tile + AIMap.GetTileIndex(-1, 0));
+            tiles.AddTile(this.tile + AIMap.GetTileIndex(-1, 0));
             if(this.is_landdock) {
-                tiles.append(this.tile + AIMap.GetTileIndex(1, 0));
-                tiles.append(this.tile + AIMap.GetTileIndex(0, -1));
-                tiles.append(this.tile + AIMap.GetTileIndex(0, 1));
-                tiles.append(this.tile + AIMap.GetTileIndex(1, -1));
-                tiles.append(this.tile + AIMap.GetTileIndex(1, 1));
-                tiles.append(this.tile + AIMap.GetTileIndex(-2, 1));
-                tiles.append(this.tile + AIMap.GetTileIndex(-1, 1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(1, 0));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(0, -1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(0, 1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(1, -1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(1, 1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(-2, 1));
+                tiles.AddTile(this.tile + AIMap.GetTileIndex(-1, 1));
             }
             return tiles;
         default:
