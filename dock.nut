@@ -183,7 +183,7 @@ function Dock::GetOccupiedTiles() {
             }
             return tiles;
         default:
-            return [];
+            return tiles;
     }
 }
 

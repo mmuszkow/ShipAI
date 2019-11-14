@@ -107,7 +107,7 @@ function Ferry::BuildFerryRoutes() {
                     dock1 = Dock(coast1);
             }
             if(dock1 == null) {
-                AILog.Warning(town.GetName() + " no longer can have the dock built nearby");
+                AILog.Warning(town.GetName() + " can no longer have the dock built nearby");
                 break;
             }
             
@@ -118,7 +118,7 @@ function Ferry::BuildFerryRoutes() {
                     dock2 = Dock(coast2);
             }
             if(dock2 == null) {
-                AILog.Warning(town2.GetName() + " no longer can have the dock built nearby");
+                AILog.Warning(town2.GetName() + " can no longer have the dock built nearby");
                 continue;
             }
            

@@ -102,11 +102,11 @@ function Freight::BuildTownFreightRoutes() {
                 if(AreCanalsAllowed()) {
                     producer_artificial_ports = producer.GetPossiblePorts();
                     if(producer_artificial_ports.len() == 0) {
-                        AILog.Warning(producer.GetName() + " no longer can have the dock built nearby");
+                        AILog.Warning(producer.GetName() + " can no longer have the dock built nearby");
                         continue;
                     }                    
                 } else {
-                    AILog.Warning(producer.GetName() + " no longer can have the dock built nearby");
+                    AILog.Warning(producer.GetName() + " can no longer have the dock built nearby");
                     continue;
                 }
             }
@@ -127,7 +127,7 @@ function Freight::BuildTownFreightRoutes() {
                 }
                 
                 if(dock1 == null) {
-                    AILog.Warning(producer.GetName() + " no longer can have the dock built nearby");
+                    AILog.Warning(producer.GetName() + " can no longer have the dock built nearby");
                     break;
                 }
                 
@@ -140,7 +140,7 @@ function Freight::BuildTownFreightRoutes() {
                         dock2 = Dock(coast2);
                 }
                 if(dock2 == null) {
-                    AILog.Warning(acceptor.GetName() + " no longer can have the dock built nearby");
+                    AILog.Warning(acceptor.GetName() + " can no longer have the dock built nearby");
                     continue;
                 }
                 
@@ -215,11 +215,11 @@ function Freight::BuildIndustryFreightRoutes() {
                 if(AreCanalsAllowed()) {
                     producer_artificial_ports = producer.GetPossiblePorts();
                     if(producer_artificial_ports.len() == 0) {
-                        AILog.Warning(producer.GetName() + " no longer can have the dock built nearby");
+                        AILog.Warning(producer.GetName() + " can no longer have the dock built nearby");
                         continue;
                     }                    
                 } else {
-                    AILog.Warning(producer.GetName() + " no longer can have the dock built nearby");
+                    AILog.Warning(producer.GetName() + " can no longer have the dock built nearby");
                     continue;
                 }
             }
@@ -273,7 +273,7 @@ function Freight::BuildIndustryFreightRoutes() {
                     if(AreCanalsAllowed()) {
                         local acceptor_artificial_ports = acceptor.GetPossiblePorts();
                         if(acceptor_artificial_ports.len() == 0) {
-                            AILog.Warning(acceptor.GetName() + " no longer can have the dock built nearby");
+                            AILog.Warning(acceptor.GetName() + " can no longer have the dock built nearby");
                             continue;
                         }
                         /* Sort acceptor_artificial_ports by distance from producer. */
@@ -286,7 +286,7 @@ function Freight::BuildIndustryFreightRoutes() {
                             }
                         }
                     } else {
-                        AILog.Warning(acceptor.GetName() + " no longer can have the dock built nearby");
+                        AILog.Warning(acceptor.GetName() + " can no longer have the dock built nearby");
                         continue;
                     }
                 }

@@ -1,6 +1,6 @@
 /* Missing API functionalities:
  *
- * AIEngine.GetCargoCapacity(engine, cargo)
+ * AIEngine.GetRefitCapacity(engine, cargo)
  * https://www.tt-forums.net/viewtopic.php?t=61021
  *
  * AIBridge.IsBridgePart(tile)
@@ -93,12 +93,14 @@ function ShipAI::Start() {
     }
 }
 
-/* To check if tile can have HQ built on, HQ is 2x2. */
-function _val_CanHaveHQ(tile) {
-    return AITile.IsBuildable(tile) &&
-           AITile.IsBuildable(tile + SOUTH) &&
-           AITile.IsBuildable(tile + WEST) &&
-           AITile.IsBuildable(tile + SOUTH + WEST);
+/* To check if tile can have HQ built on, HQ is 2x2. 
+ * We also make sure we don't block the dock exit. */
+function _val_CanHaveHQ(tile, dock_front) {
+    return AITile.IsBuildable(tile) && tile != dock_front &&
+           AITile.IsBuildable(tile + SOUTH) && tile + SOUTH != dock_front &&
+           AITile.IsBuildable(tile + WEST) && tile + WEST != dock_front &&
+           AITile.IsBuildable(tile + SOUTH + WEST) && tile + SOUTH + WEST != dock_front;
+           
 }
 
 function ShipAI::BuildHQ() {
@@ -110,6 +112,7 @@ function ShipAI::BuildHQ() {
     local towns = AITownList();
     towns.Valuate(AITown.GetRating, AICompany.COMPANY_SELF);
     towns.RemoveValue(AITown.TOWN_RATING_NONE);
+	towns.RemoveValue(AITown.TOWN_RATING_INVALID);    
     towns.Valuate(AITown.GetPopulation);
     towns.Sort(AIList.SORT_BY_VALUE, AIList.SORT_DESCENDING);
 
@@ -120,12 +123,12 @@ function ShipAI::BuildHQ() {
         if(stations.IsEmpty())
             continue;
         local station = stations.Begin();
-        local dock = AIStation.GetLocation(station);
+        local dock = AIStation.GetLocation(station);        
 
         /* Get tiles around our dock sorted by distance from dock. */
         local location = AITileList();
         SafeAddRectangle(location, dock, 10);
-        location.Valuate(_val_CanHaveHQ);
+        location.Valuate(_val_CanHaveHQ, GetHillFrontTile(dock, 2));
         location.KeepValue(1);
         if(location.IsEmpty())
             continue;
@@ -188,6 +191,7 @@ function ShipAI::PlantTreesIfRich() {
         area.Valuate(AITile.IsBuildable);
         area.KeepValue(1);
         area.Valuate(AIBase.RandItem);
+        area.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
         for(local tile = area.Begin(); !area.IsEnd(); tile = area.Next()) {
             if(AITile.PlantTree(tile))
                 planted++;
@@ -197,7 +201,6 @@ function ShipAI::PlantTreesIfRich() {
     return planted;
 }
 
-/* Build statues in the cities we have any station. */
 function ShipAI::BuildStatuesIfRich() {
     local founded = 0;
    
@@ -206,7 +209,9 @@ function ShipAI::BuildStatuesIfRich() {
     
     local towns = AITownList();
     towns.Valuate(AITown.GetRating, AICompany.COMPANY_SELF);
-    towns.RemoveValue(AITown.TOWN_RATING_NONE);
+    towns.KeepBelowValue(AITown.TOWN_RATING_GOOD);
+	towns.RemoveValue(AITown.TOWN_RATING_NONE);
+	towns.RemoveValue(AITown.TOWN_RATING_INVALID);    
     towns.Valuate(AITown.HasStatue);
     towns.KeepValue(0);
     towns.Valuate(AITown.IsActionAvailable, AITown.TOWN_ACTION_BUILD_STATUE);

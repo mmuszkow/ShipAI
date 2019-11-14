@@ -1,22 +1,22 @@
 require("utils.nut");
 
+/* Aqueducts differ a bit from other bridge types:
+ * - they can have unlimited length 
+ * - they can be built only on "simple" slopes on both sides */ 
 class Aqueduct {
     edge1 = -1;
     edge2 = -1;
-   
-    /* Aqueducts, other than road and rail bridges, can have unlimited length. */ 
-    max_bridge_len = 10;
 
-    constructor(edge, max_bridge_len = 10) {
+    /* Aqueducts, other than road and rail bridges, can have unlimited length. */ 
+    constructor(edge, max_length = 10) {
         if(AIBridge.IsBridgeTile(edge)) {
             this.edge1 = edge;
             this.edge2 = AIBridge.GetOtherBridgeEnd(edge);
-        } else {
-            this.edge2 = _FindOtherBridgeEnd(edge);
+        } else if(max_length >= 0) {
+            this.edge2 = _FindOtherEnd(edge, max_length);
             if(this.edge2 != -1)
                 this.edge1 = edge;
         }
-        this.max_bridge_len = max_bridge_len;
     }
 }
 
@@ -32,9 +32,9 @@ function Aqueduct::GetMiddleTile() {
     return AIMap.GetTileIndex(((x1+x2)/2).tointeger(), ((y1+y2)/2).tointeger());
 }
 
-/* Finds other end for a potential bridge. */
-function Aqueduct::_FindOtherBridgeEnd(edge) {
-    if(!AITile.IsBuildable(edge))
+/* Finds other end for a potential aqueduct. */
+function Aqueduct::_FindOtherEnd(edge, max_length) {
+    if(!AITile.IsBuildable(edge) || max_length < 0)
         return -1;
 
     /* Follow down the slope. */
@@ -57,16 +57,22 @@ function Aqueduct::_FindOtherBridgeEnd(edge) {
             return -1;
     }
 
-    /* Everything on the way must be under the bridge. */
+    /* Everything on the way must be under the aqueduct. */
     local height = AITile.GetMaxHeight(edge);
     local complementary = AITile.GetComplementSlope(slope);
     edge += dir;
     local i = 0;
-    while(i++ < this.max_bridge_len) {
+    while(i++ <= max_length) {
         /* No aqueducts over sea. */
         if(AITile.GetMinHeight(edge) == 0)
             return -1;
-      
+        
+        /* Bridges can be built over empty terrain, roads, railways and water only (no buildings). */
+        if(!AITile.IsBuildable(edge) && !AIRoad.IsRoadTile(edge) &&
+           !AIRail.IsRailTile(edge) && !AIMarine.IsCanalTile(edge) &&
+           !AITile.IsWaterTile(edge))
+            return -1;
+
         /* When we reach our start level again it's the decision time. */ 
         if(AITile.GetMaxHeight(edge) == height) {
             if(AITile.GetSlope(edge) == complementary && AITile.IsBuildable(edge))

@@ -24,15 +24,16 @@ class CanalPathfinder {
     }
 }
 
+/* Used by _FindAdjacentLockTile. */
 function _val_IsLockCapableCoast(tile, ignored) {
     if(!AITile.IsCoastTile(tile) || !IsSimpleSlope(tile))
         return false;
     local front1 = GetHillFrontTile(tile, 1);
     local front2 = GetHillFrontTile(tile, 2);
     local back1 = GetHillBackTile(tile, 1);
-    foreach(item in ignored)
-        if(item == tile || item == front1 || item == front2 || item == back1)
-            return false;
+    if(ignored.HasItem(tile) || ignored.HasItem(front1) ||
+       ignored.HasItem(front2) || ignored.HasItem(back1))
+        return false;
     return  AITile.IsWaterTile(front1) && (AITile.GetSlope(front1) == AITile.SLOPE_FLAT) &&
             /* dont destroy existing canals */
             !AIMarine.IsCanalTile(back1) &&
@@ -43,7 +44,7 @@ function _val_IsLockCapableCoast(tile, ignored) {
             AITile.IsBuildable(back1) && (AITile.GetSlope(back1) == AITile.SLOPE_FLAT);
 }
 
-/* Finds a lock/possible lock tile next to the water tile. */
+/* Finds a lock/possible lock tile next to the water tile. Used to find entry/exit tiles from/to sea. */
 function CanalPathfinder::_FindAdjacentLockTile(water, direction, ignored) {
     /* Get coast tile next to water. */
     local adj = AITileList();
@@ -145,10 +146,6 @@ function CanalPathfinder::FindPath(start, end, max_distance, land_ignored, sea_i
     if(start == -1 || end == -1 || (start == end))
         return false;
 
-    // TODO: inner lock pf, for now we can't change heights
-    if(AITile.GetMaxHeight(start) != AITile.GetMaxHeight(end))
-        return false;
-
     this._max_length = max_distance;
     this._aystar.InitializePath([start, this._GetDominantDirection(start, end), null], end, land_ignored);
     local tmp_path = this._aystar.FindPath(10000);
@@ -174,24 +171,24 @@ function CanalPathfinder::_Cost(self, path, new_tile, new_direction) {
         return 0;
    
     /* Building infrastructure cost. */
-    local cost = 0;
+    local infrastructure_cost = 0;
     if(path.infrastructure != null) {
         if(path.infrastructure.Exists())
-            cost += AIMap.DistanceManhattan(path.tile, new_tile) * self._reuse_cost;
+            infrastructure_cost += AIMap.DistanceManhattan(path.tile, new_tile) * self._reuse_cost;
         else if(path.infrastructure instanceof Aqueduct)
-            cost += path.infrastructure.Length() * self._canal_cost * self._bridge_cost_multiplier;
+            infrastructure_cost += path.infrastructure.Length() * self._canal_cost * self._bridge_cost_multiplier;
         else
-            cost += self._lock_cost;
+            infrastructure_cost += self._lock_cost;
     }
 
     /* Reusing existing tile. */
     if( AIMarine.IsCanalTile(new_tile) || 
         AIMarine.IsBuoyTile(new_tile) || 
         AITile.IsWaterTile(new_tile))
-        return path.cost + cost + self._reuse_cost;
+        return path.cost + infrastructure_cost + self._reuse_cost;
     
     /* Creating new canal tile */
-    return path.cost + cost + self._canal_cost;
+    return path.cost + infrastructure_cost + self._canal_cost;
 }
 
 function CanalPathfinder::_Estimate(self, cur_tile, cur_direction, goal_tiles) {
@@ -228,38 +225,56 @@ function CanalPathfinder::_Neighbours(self, path, cur_node) {
 
         switch(AITile.GetSlope(next)) {
             case AITile.SLOPE_FLAT:
-                // TODO: lock pf
-                //if(AIMarine.IsLockTile(next)) {
-                //    /* Reuse existing lock if not leading to the sea. */
-                //    local lock_tile = next + offset;
-                //    if(AIMarine.IsLockTile(lock_tile) && AITile.GetMinHeight(lock_tile) > 0) {
-                //        local lock = Lock(lock_tile);
-                //        local exit = -1;
-                //        if(next == lock.GetUpperTile())
-                //            exit = lock.GetLowerWaterTile();
-                //        else
-                //            exit = lock.GetUpperWaterTile(); 
-                //        if(exit != -1 && self._CanBeCanal(exit))
-                //            tiles.append([exit, self._GetDirection(cur_node, exit), lock]);
-                //    }  
-                //} else if(self._CanBeCanal(next))
-                //    tiles.append([next, self._GetDirection(cur_node, next), null]);
-                
+                if(AIMarine.IsLockTile(next)) {
+                    /* Reuse existing lock if not leading to the sea. */
+                    local lock_tile = next + offset;
+                    if(AIMarine.IsLockTile(lock_tile) && AITile.GetMinHeight(lock_tile) > 0) {
+                        local lock = Lock(lock_tile);
+                        local lock_2 = lock_tile + offset;
+                        local lock_exit = lock_2 + offset;
+                        if(self._CanBeCanal(lock_exit)) {
+                            tiles.append([lock_exit, self._GetDirection(cur_node, lock_exit), lock]);
+
+                            /* Add lock upper/lower and side tiles to the "ignored" list. */
+                            local side_tiles = null;
+                            if(lock_2 == lock.GetUpperTile())
+                                side_tiles = lock.GetUpperSideTiles();
+                            else
+                                side_tiles = lock.GetLowerSideTiles();
+                            self._aystar._closed.RemoveItem(lock_2);
+                            self._aystar._closed.AddItem(lock_2, ~0);
+                            self._aystar._closed.RemoveList(side_tiles);
+                            side_tiles.Valuate(__val__Set0xFF);
+                            self._aystar._closed.AddList(side_tiles);
+                        }
+                    }
+                } else if(AITile.IsBuildable(next) && !self._aystar._closed.HasItem(next)) {
+                    /* Check if we can place a lock two tiles ahead. */
+                    local next_2 = next + offset;
+                    local next_3 = next_2 + offset;
+                    local lock_exit = next_3 + offset;
+                    if(AITile.GetMinHeight(next_2) > 0 && IsSimpleSlope(next_2) &&
+                       AITile.IsBuildable(next_2) && AITile.IsBuildable(next_3) && 
+                       AITile.GetSlope(next_3) == AITile.SLOPE_FLAT && self._CanBeCanal(lock_exit)) {
+                        local lock = Lock(next_2);
+                        tiles.append([lock_exit, self._GetDirection(cur_node, lock_exit), lock]);
+
+                        /* Add lock upper/lower and side tiles to the "ignored" list. */
+                        local side_tiles = null;
+                        if(next_3 == lock.GetUpperTile())
+                            side_tiles = lock.GetUpperSideTiles();
+                        else
+                            side_tiles = lock.GetLowerSideTiles();
+                        self._aystar._closed.RemoveItem(next_3);
+                        self._aystar._closed.AddItem(next_3, ~0); /* TODO: proper direction, instead of all */
+                        self._aystar._closed.RemoveList(side_tiles);
+                        side_tiles.Valuate(__val__Set0xFF); /* TODO: proper direction, instead of all */
+                        self._aystar._closed.AddList(side_tiles);
+                        continue; /* TODO: consider this tile also as a possible canal. */
+                    }
+                }
                 if(self._CanBeCanal(next))
                     tiles.append([next, self._GetDirection(cur_node, next), null]);
-
-                /* Check if can place a lock two tiles ahead. */
-                //local next_2 = next + offset;
-                //if(!AIMap.IsValidTile(next_2) || AITile.GetMinHeight(next_2) == 0 || !IsSimpleSlope(next_2))
-                //    continue;
-                //local next_3 = next_2 + offset;
-                //if(!AIMap.IsValidTile(next_3) || !self._CanBeCanal(next_3))
-                //    continue;
-                //local lock_exit = next_3 + offset;
-                //if(AIMap.IsValidTile(lock_exit) || self._CanBeCanal(lock_exit)) {
-                //    local lock = Lock(next_2);
-                //    tiles.append([lock_exit, self._GetDirection(cur_node, lock_exit), lock]);
-                //}
                 break;
             /* Simple slopes. */
             case AITile.SLOPE_NE:
@@ -280,7 +295,7 @@ function CanalPathfinder::_Neighbours(self, path, cur_node) {
                         }
                     } else {
                         /* Build new aqueduct. */
-                        local aqueduct = Aqueduct(next);
+                        local aqueduct = Aqueduct(next, min(10, self._max_length - path.length - 2));
                         local exit = aqueduct.GetFront2();
                         if(exit != -1 && self._CanBeCanal(exit))
                             tiles.append([exit, self._GetDirection(cur_node, exit), aqueduct]);

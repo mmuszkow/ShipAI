@@ -58,9 +58,9 @@ class AyStar
      * Initialize a path search between source and goal.
      * @param source The source node.
      * @param goal The target tile.
-     * @param ignored_tiles An AIList of tiles that cannot occur in the final path.
+     * @param ignored_tiles An AITileList of tiles that cannot occur in the final path.
      */
-    function InitializePath(source, goal, ignored_tiles = []);
+    function InitializePath(source, goal, ignored_tiles = AITileList());
 
     /**
      * Try to find the path as indicated with InitializePath with the lowest cost.
@@ -75,7 +75,7 @@ class AyStar
     function FindPath(iterations);
 };
 
-/* Used to set all directions in ignored as block, see InitializePath. */
+/* Used to set all directions in ignored tiles to be blocked, see InitializePath. */
 function __val__Set0xFF(item) {
     return ~0;
 }
