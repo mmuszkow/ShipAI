@@ -60,8 +60,13 @@ function Water::WaitToHaveEnoughMoney(cost) {
 }
 
 function Water::GetTownsThatCanHaveOrHaveDock(cargo, towns = AITownList()) {
+    /* Randomize, to process towns in random order. */
+    towns.Valuate(AIBase.RandItem);
+    towns.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
+
     /* To avoid exceeding CPU limit in Valuator, we split the list in parts */
     local merged = AIList();
+    local start_time = AIDate.GetCurrentDate();
     for(local i=0; i<towns.Count(); i+=50) {
         local splitted = AIList();
         splitted.AddList(towns);
@@ -70,6 +75,10 @@ function Water::GetTownsThatCanHaveOrHaveDock(cargo, towns = AITownList()) {
         splitted.Valuate(_val_TownCanHaveOrHasDock, this.max_city_dock_distance, cargo);
         splitted.RemoveValue(0);
         merged.AddList(splitted);
+
+        /* On big maps this can take forever, we stop after 6 months. */
+        if(AIDate.GetCurrentDate() - start_time > 180)
+            break;
     }
     return merged;
 }

@@ -12,8 +12,13 @@ class Freight extends Water {
 }
 
 function Freight::GetIndustriesThatCanHaveOrHaveDock(industries) {
+    /* Randomize, to process industries in random order. */
+    industries.Valuate(AIBase.RandItem);
+    industries.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
+    
     /* To avoid exceeding CPU limit in Valuator, we split the list in parts */
     local merged = AIList();
+    local start_time = AIDate.GetCurrentDate();
     for(local i=0; i<industries.Count(); i+=50) {
         local splitted = AIList();
         splitted.AddList(industries);
@@ -22,7 +27,16 @@ function Freight::GetIndustriesThatCanHaveOrHaveDock(industries) {
         splitted.Valuate(_val_IndustryCanHaveOrHasDock, true);
         splitted.RemoveValue(0);
         merged.AddList(splitted);
+
+        /* On big maps this can take forever, we stop after 6 months. */
+        if(AIDate.GetCurrentDate() - start_time > 180)
+            break;
     }
+    
+    /* Randomize, so that each instance of ShipAI on the map targets a different industry */
+    merged.Valuate(AIBase.RandItem);
+    merged.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
+    
     return merged;
 }
 

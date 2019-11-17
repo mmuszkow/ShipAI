@@ -8,11 +8,42 @@
  * - getters for Path were replaced with direct attributes
  * - single source & goal
  * - ignored tiles are AIList instead of array
- * - Fibonacci heap is used instead of binary heap
+ * - "native" heap is used instead of binary heap
  */
+
+/* Simply using AIList of indexes is faster than any squirrel implementation. */
+class NativeHeap {
+    _data = null;
+    _sorter = null;
+    _size = null;
+
+    constructor() {
+        this._data = [];
+        this._sorter = AIList();
+        this._size = 0;
+    }
+
+    function Insert(obj, value) {
+        _data.push(obj);
+        _sorter.AddItem(_data.len() - 1, value);
+        _size++;
+    }
+
+    function Pop() {
+        _sorter.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
+        local ret = _data[_sorter.Begin()];
+        _sorter.RemoveTop(1);
+        _size--;
+        return ret;
+    }
+
+    function Count() {
+        return _size;
+    }
+};
+
 class AyStar
 {
-    _queue_class = import("queue.fibonacci_heap", "", 3);
     _pf_instance = null;
     _cost_callback = null;
     _estimate_callback = null;
@@ -82,7 +113,7 @@ function __val__Set0xFF(item) {
 
 function AyStar::InitializePath(source, goal, ignored_tiles = AITileList())
 {
-    this._open = this._queue_class();
+    this._open = NativeHeap();
     this._goal = goal;
     this._closed = ignored_tiles;
     this._closed.Valuate(__val__Set0xFF);

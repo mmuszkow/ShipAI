@@ -218,6 +218,10 @@ function CanalPathfinder::_Neighbours(self, path, cur_node) {
 
     foreach(offset in offsets) {
         local next = cur_node + offset;
+        /* Do not go back. */
+        if(next == path.tile)
+            continue;
+        
         if(next == self._aystar._goal) {
             tiles.append([next, self._GetDirection(cur_node, next), null]);
             continue;
@@ -328,4 +332,31 @@ function CanalPathfinder::_GetDirection(from, to) {
     if (from - to <= -AIMap.GetMapSizeX()) return 8;    // Down
     if (from - to < 0) return 2;                        // Left
 }
+
+/* Performance comparison, 1024x1024 map, infinite funds:
+ * old coast, generic A*, canal estimate x 1 : 5602 days, 190 paths
+ * old coast, generic A*, canal estimate x 1 : 5490 days, 174 paths
+ * old coast, generic A*, canal estimate x 5 : 3408 days, 198 paths
+ * old coast, generic A*, canal estimate x 5 : 3524 days, 197 paths
+ * old coast, generic A*, canal estimate x 8 : 3276 days, 198 paths
+ * old coast, generic A*, canal estimate x 10: 3184 days, 196 paths
+ * old coast, inline A* , canal estimate x 5 : 3164 days, 205 paths
+ * new coast, generic A*, canal estimate x 5 : 3098 days, 240 paths
+ * new coast, Fibonacci A*,canal estimate x 5: 3046 days, 240 paths
+ *
+ * second round, even newer coast, canals, locks, aqueducts, 1024x1024 map, estimate x1:
+ * native,          5926 days, 319 paths
+ * binary heap,     8114 days, 271 paths
+ * Fibonacci heap,  7921 days, 298 paths
+ *
+ * generic A* vs inline A*: inlining and removing unused functions from Graph.Aystar.6
+ * doesn't bring any major performance gain
+ *
+ * binary heap vs Fibonacci heap in A*: almost no performance gain
+ *
+ * native: performance gain, but can cause game to lag + it's not guaranteed to
+ * work in the future versions with the same performance
+ *
+ * old vs new coast: old was following water tiles next to coast, new is following coast tiles
+ */
 

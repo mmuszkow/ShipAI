@@ -30,13 +30,18 @@ function Ferry::_GetPassengersCargoId() {
     return cargo_list.Begin();
 }
 
+/* Randomizes results so different instances of ShipAI don't approach same towns. */
+function __val__GetPopulationRand(town_id) {
+    return AITown.GetPopulation(town_id) + AIBase.RandRange(101) - 50;
+}
+
 function Ferry::GetTownsThatCanHaveOrHavePassengerDockOrderedByPop() {
     local towns = AITownList();
     towns.Valuate(AITown.GetPopulation);
     towns.KeepAboveValue(this.min_population);
     
     local dock_capable = GetTownsThatCanHaveOrHaveDock(this._passenger_cargo_id, towns);
-    dock_capable.Valuate(AITown.GetPopulation);
+    dock_capable.Valuate(__val__GetPopulationRand);
     dock_capable.Sort(AIList.SORT_BY_VALUE, AIList.SORT_DESCENDING);
     return dock_capable;
 }

@@ -53,15 +53,17 @@ function ShipAI::Start() {
             ferry.max_parts = 1;
         }
       
-        //local start = AIDate.GetCurrentDate();
         /* Build industry-industry & industry-town connections. */
+        local start_time = AIDate.GetCurrentDate();
         local new_freights = freight.BuildIndustryFreightRoutes();
         new_freights += freight.BuildTownFreightRoutes();
-        //AILog.Info("" + new_freights + " freight in " + (AIDate.GetCurrentDate() - start) + " days");
+        local freight_time = AIDate.GetCurrentDate() - start_time;
         freight.maintenance.PerformIfNeeded();
         
         /* Build town-town connections. */
+        start_time = AIDate.GetCurrentDate();
         local new_ferries = ferry.BuildFerryRoutes();
+        local ferry_time = AIDate.GetCurrentDate() - start_time;
         ferry.maintenance.PerformIfNeeded();
 
         /* Return the loan if we have the money. */
@@ -80,8 +82,8 @@ function ShipAI::Start() {
         local trees_planted = (statues_founded > 0) ? 0 : PlantTreesIfRich();
  
         /* Print summary/ */
-        if(new_freights > 0) AILog.Info("New freight routes: " + new_freights);
-        if(new_ferries > 0) AILog.Info("New ferry routes: " + new_ferries);
+        if(new_freights > 0) AILog.Info(new_freights + " new freight routes built in " + freight_time + " days");
+        if(new_ferries > 0) AILog.Info(new_ferries + " new ferry routes built in " + ferry_time + " days");
         if(statues_founded > 0) AILog.Info("Statues founded: " + statues_founded);
         if(trees_planted > 0) AILog.Info("Trees planted: " + trees_planted);
 
@@ -137,7 +139,7 @@ function ShipAI::BuildHQ() {
        
         /* Rename the dock. */ 
         if(AICompany.BuildCompanyHQ(location.Begin())) {
-            AIStation.SetName(station, "ShipAI Headquarters");
+            AIStation.SetName(station, AICompany.GetName(AICompany.COMPANY_SELF) + " Headquarters");
             AILog.Info("Building HQ in " + Town(town).GetName());
             return true;
         }
