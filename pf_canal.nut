@@ -191,10 +191,10 @@ function CanalPathfinder::_Cost(self, path, new_tile, new_direction) {
     return path.cost + infrastructure_cost + self._canal_cost;
 }
 
-function CanalPathfinder::_Estimate(self, cur_tile, cur_direction, goal_tiles) {
+function CanalPathfinder::_Estimate(self, cur_tile, cur_direction) {
     /* Result of this function can be multiplied by value greater than 1 to 
      * get results faster, but they won't be optimal */
-    return AIMap.DistanceManhattan(cur_tile, self._aystar._goal);
+    return AIMap.DistanceManhattan(cur_tile, self._aystar._goal) * self._reuse_cost;
 }
 
 function CanalPathfinder::_CanBeCanal(tile) {

@@ -120,7 +120,7 @@ function AyStar::InitializePath(source, goal, ignored_tiles = AITileList())
 
     if (source[1] <= 0) throw("directional value should never be zero or negative.");
     local new_path = this.Path(null, source[0], source[1], source[2], this._cost_callback, this._pf_instance);
-    this._open.Insert(new_path, new_path.cost + this._estimate_callback(this._pf_instance, source[0], source[1], goal));
+    this._open.Insert(new_path, new_path.cost + this._estimate_callback(this._pf_instance, source[0], source[1]));
 }
 
 function AyStar::FindPath(iterations)
@@ -155,7 +155,7 @@ function AyStar::FindPath(iterations)
             if ((this._closed.GetValue(node[0]) & node[1]) != 0) continue;
             /* Calculate the new paths and add them to the open list */
             local new_path = this.Path(path, node[0], node[1], node[2], this._cost_callback, this._pf_instance);
-            this._open.Insert(new_path, new_path.cost + this._estimate_callback(this._pf_instance, node[0], node[1], this._goal));
+            this._open.Insert(new_path, new_path.cost + this._estimate_callback(this._pf_instance, node[0], node[1]));
         }
     }
 
