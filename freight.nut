@@ -128,11 +128,11 @@ function Freight::BuildTownFreightRoutes() {
             for(local acceptor_id = close_acceptors.Begin(); !close_acceptors.IsEnd(); acceptor_id = close_acceptors.Next()) {
                 
                 /* Let's get more info about the starting dock. */ 
-                if(dock1 == null) {
+                if(dock1 == null || (dock1.is_landdock && !dock1.IsValidStation())) {
                     /* No coast nearby for producer, take the possible artificial dock location instead. */
                     local min_dist = 99999999;
                     foreach(port in producer_artificial_ports) {
-                        local dist = AIIndustry.GetDistanceManhattanToTile(acceptor_id, port.tile);
+                        local dist = AITown.GetDistanceManhattanToTile(acceptor_id, port.tile);
                         if(dist != -1 && dist < min_dist) {
                             min_dist = dist;
                             dock1 = port;
@@ -261,12 +261,12 @@ function Freight::BuildIndustryFreightRoutes() {
                 local acceptor = Industry(acceptor_id, false);
                 
                 /* Let's get more info about the starting dock. */
-                if(dock1 == null) {
+                if(dock1 == null || (dock1.is_landdock && !dock1.IsValidStation())) {
                     /* No coast nearby for producer, take the possible artificial dock location instead. */
                     local min_dist = 99999999;
                     foreach(port in producer_artificial_ports) {
                         local dist = AIIndustry.GetDistanceManhattanToTile(acceptor_id, port.tile);
-                        if(dist < min_dist) {
+                        if(dist != -1 && dist < min_dist) {
                             min_dist = dist;
                             dock1 = port;
                         }
