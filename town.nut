@@ -46,19 +46,26 @@ function _val_TownCanHaveOrHasDock(town_id, range, cargo) {
 
 /* Returns existing dock with biggest cargo acceptance. */
 function Town::GetExistingDock(cargo) {
-    local stations = AIStationList(AIStation.STATION_DOCK);
-    stations.Valuate(AIStation.GetNearestTown);
-    stations.KeepValue(this.id);
-
     /* We need to get each station tile, as there is no function
      * to determine if station is accepting a specific cargo.
      * AIStation.HasCargoRating is not enough, as it is true
      * only if the specific cargo was taken from the station
      * at least once. Also, Dock class takes tile, not ID as 
      * the argument in constructor. */
+    local stations = AIStationList(AIStation.STATION_DOCK);
     local docks = AITileList();
-    for(local station_id = stations.Begin(); !stations.IsEnd(); station_id = stations.Next())
-        docks.AddItem(AIStation.GetLocation(station_id), 0);
+
+    /* Process in chunks to avoid valuator timeout when having 5k+ stations and more. */
+    for(local i=0; i<stations.Count(); i+=1000) {
+        local chunk = AIList();
+        chunk.AddList(stations);
+        chunk.RemoveTop(i);
+        chunk.KeepTop(1000);
+        chunk.Valuate(AIStation.GetNearestTown);
+        chunk.KeepValue(this.id);
+        for(local station_id = chunk.Begin(); !chunk.IsEnd(); station_id = chunk.Next())
+            docks.AddTile(AIStation.GetLocation(station_id));
+    }
 
     /* Sort by acceptance. */
     docks.Valuate(AITile.GetCargoAcceptance, cargo, 1, 1, AIStation.GetCoverageRadius(AIStation.STATION_DOCK));
