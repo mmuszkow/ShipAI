@@ -41,7 +41,7 @@ function _val_IsLockCapableCoast(tile, ignored) {
             AITile.IsWaterTile(front2) && (AITile.GetSlope(front2) == AITile.SLOPE_FLAT) &&
             /* additional space so we don't block lock in front */
             AITile.IsWaterTile(GetHillFrontTile(tile, 3)) &&
-            AITile.IsBuildable(back1) && (AITile.GetSlope(back1) == AITile.SLOPE_FLAT);
+            (AITile.IsWaterTile(back1) || AITile.IsBuildable(back1)) && (AITile.GetSlope(back1) == AITile.SLOPE_FLAT);
 }
 
 /* Finds a lock/possible lock tile next to the water tile. Used to find entry/exit tiles from/to sea. */
@@ -80,6 +80,9 @@ function CanalPathfinder::_FindAdjacentLockTile(water, direction, ignored) {
         return locks.Begin();
     }
 
+    coastal.Valuate(_val_IsLockCapableCoast, ignored);
+    coastal.KeepValue(1);
+
     /* Use river entries next. */
     local rivers = AITileList();
     rivers.AddList(coastal);
@@ -92,8 +95,6 @@ function CanalPathfinder::_FindAdjacentLockTile(water, direction, ignored) {
     }
 
     /* No locks or rivers? Take the coast closest to the direction. */
-    coastal.Valuate(_val_IsLockCapableCoast, ignored);
-    coastal.KeepValue(1);
     coastal.Valuate(AIMap.DistanceManhattan, direction);
     coastal.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
     if(coastal.IsEmpty())
