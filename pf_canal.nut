@@ -9,7 +9,7 @@ class CanalPathfinder {
     _max_length = 100;
 
     /* max tiles left/right when we can place a lock (for reusing locks). */
-    _max_adj_lock = 5;
+    _max_adj_lock = 10;
 
     _reuse_cost = 1;
     _canal_cost = 5;
@@ -80,7 +80,18 @@ function CanalPathfinder::_FindAdjacentLockTile(water, direction, ignored) {
         return locks.Begin();
     }
 
-    /* No locks? Take coast closest to direction. */
+    /* Use river entries next. */
+    local rivers = AITileList();
+    rivers.AddList(coastal);
+    rivers.Valuate(AITile.IsWaterTile);
+    rivers.KeepValue(1);
+    if(!rivers.IsEmpty()) {
+        rivers.Valuate(AIMap.DistanceManhattan, direction);
+        rivers.Sort(AIList.SORT_BY_VALUE, AIList.SORT_ASCENDING);
+        return rivers.Begin();
+    }
+
+    /* No locks or rivers? Take the coast closest to the direction. */
     coastal.Valuate(_val_IsLockCapableCoast, ignored);
     coastal.KeepValue(1);
     coastal.Valuate(AIMap.DistanceManhattan, direction);
