@@ -67,14 +67,14 @@ function Water::GetTownsThatCanHaveOrHaveDock(cargo, towns = AITownList()) {
     /* To avoid exceeding CPU limit in Valuator, we split the list in parts */
     local merged = AIList();
     local start_time = AIDate.GetCurrentDate();
-    for(local i=0; i<towns.Count(); i+=50) {
-        local splitted = AIList();
-        splitted.AddList(towns);
-        splitted.RemoveTop(i);
-        splitted.KeepTop(50);
-        splitted.Valuate(_val_TownCanHaveOrHasDock, this.max_city_dock_distance, cargo);
-        splitted.RemoveValue(0);
-        merged.AddList(splitted);
+    for(local i=0; i<towns.Count(); i+=25) {
+        local chunk = AIList();
+        chunk.AddList(towns);
+        chunk.RemoveTop(i);
+        chunk.KeepTop(25);
+        chunk.Valuate(_val_TownCanHaveOrHasDock, this.max_city_dock_distance, cargo);
+        chunk.RemoveValue(0);
+        merged.AddList(chunk);
 
         /* On big maps this can take forever, we stop after 6 months. */
         if(AIDate.GetCurrentDate() - start_time > 180)

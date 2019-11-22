@@ -37,7 +37,8 @@ function ShipAI::Start() {
     while(!freight.AreShipsAllowed()) { this.Sleep(1000); }
     
     /* Get max loan. */
-    AICompany.SetLoanAmount(AICompany.GetMaxLoanAmount());
+    if(AICompany.GetBankBalance(AICompany.COMPANY_SELF) < AICompany.GetMaxLoanAmount())
+        AICompany.SetLoanAmount(AICompany.GetMaxLoanAmount());
 
     local iter = 0;    
     while(true) {

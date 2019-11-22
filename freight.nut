@@ -20,13 +20,13 @@ function Freight::GetIndustriesThatCanHaveOrHaveDock(industries) {
     local merged = AIList();
     local start_time = AIDate.GetCurrentDate();
     for(local i=0; i<industries.Count(); i+=50) {
-        local splitted = AIList();
-        splitted.AddList(industries);
-        splitted.RemoveTop(i);
-        splitted.KeepTop(50);
-        splitted.Valuate(_val_IndustryCanHaveOrHasDock, true);
-        splitted.RemoveValue(0);
-        merged.AddList(splitted);
+        local chunk = AIList();
+        chunk.AddList(industries);
+        chunk.RemoveTop(i);
+        chunk.KeepTop(50);
+        chunk.Valuate(_val_IndustryCanHaveOrHasDock, true);
+        chunk.RemoveValue(0);
+        merged.AddList(chunk);
 
         /* On big maps this can take forever, we stop after 6 months. */
         if(AIDate.GetCurrentDate() - start_time > 180)
