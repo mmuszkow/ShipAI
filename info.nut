@@ -2,8 +2,8 @@ class ShipAI extends AIInfo {
     function GetAuthor()      { return "mmuszkow"; }
     function GetName()        { return "ShipAI"; }
     function GetDescription() { return "AI using only ships"; }
-    function GetVersion()     { return 10; }
-    function GetDate()        { return "2019-11-11"; }
+    function GetVersion()     { return 11; }
+    function GetDate()        { return "2020-05-04"; }
     function GetAPIVersion () { return "1.2"; } /* for AICompany.GetQuarterlyExpenses */
     function GetURL()         { return "https://www.tt-forums.net/viewtopic.php?f=65&t=75531"; }
     function CreateInstance() { return "ShipAI"; }

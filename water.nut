@@ -54,9 +54,17 @@ function Water::AreShipsAllowed() {
 }
 
 function Water::WaitToHaveEnoughMoney(cost) {
-    while(cost + 2 * AICompany.GetLoanInterval() >
-          AICompany.GetQuarterlyExpenses(AICompany.COMPANY_SELF, AICompany.CURRENT_QUARTER) 
-        + AICompany.GetBankBalance(AICompany.COMPANY_SELF)) {}
+    /* Have some margin, AICompany.GetQuarterlyExpenses returns negative value . */
+    local needed = cost + 2 * AICompany.GetLoanInterval() - AICompany.GetQuarterlyExpenses(AICompany.COMPANY_SELF, AICompany.CURRENT_QUARTER);
+    if(AICompany.GetBankBalance(AICompany.COMPANY_SELF) < needed && AICompany.GetLoanAmount() != AICompany.GetMaxLoanAmount()) {
+        local to_loan = ceil((needed - AICompany.GetBankBalance(AICompany.COMPANY_SELF)) / AICompany.GetLoanInterval().tofloat()).tointeger() * AICompany.GetLoanInterval();
+        if(!AICompany.SetLoanAmount(min(AICompany.GetLoanAmount() + to_loan, AICompany.GetMaxLoanAmount())))
+            AILog.Error("Failed to take a loan: " + AIError.GetLastErrorString());
+    }
+
+    while(cost + 2 * AICompany.GetLoanInterval() -
+          AICompany.GetQuarterlyExpenses(AICompany.COMPANY_SELF, AICompany.CURRENT_QUARTER) >
+          AICompany.GetBankBalance(AICompany.COMPANY_SELF)) {}
 }
 
 function Water::GetTownsThatCanHaveOrHaveDock(cargo, towns = AITownList()) {

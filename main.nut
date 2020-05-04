@@ -22,6 +22,7 @@ class ShipAI extends AIController {
 function ShipAI::Save() { return {}; }
 
 function ShipAI::Start() {
+    AICompany.SetLoanAmount(0);
     SetCompanyName();    
 
     /* Use single Maintenance instance for both freight and PAX. */
@@ -29,17 +30,11 @@ function ShipAI::Start() {
     local freight = Freight(maintenance);
     local ferry = Ferry(maintenance);
     
-    /* Check if we have anything to do, if not repay the loan and wait. */
-    if(!freight.AreShipsAllowed()) {
+    /* Check if we have anything to do, if not - wait. */
+    if(!freight.AreShipsAllowed())
         AILog.Warning("Not possible to build ships - falling asleep");
-        AICompany.SetLoanAmount(0);
-    }
     while(!freight.AreShipsAllowed()) { this.Sleep(1000); }
     
-    /* Get max loan. */
-    if(AICompany.GetBankBalance(AICompany.COMPANY_SELF) < AICompany.GetMaxLoanAmount())
-        AICompany.SetLoanAmount(AICompany.GetMaxLoanAmount());
-
     local iter = 0;    
     while(true) {
         /* To speed-up the path finding, we search for the more complicated paths rarely. */
@@ -67,13 +62,15 @@ function ShipAI::Start() {
         local ferry_time = AIDate.GetCurrentDate() - start_time;
         ferry.maintenance.PerformIfNeeded();
 
-        /* Return the loan if we have the money. */
-        if((AICompany.GetLoanAmount() > 0) &&
-           (AICompany.GetBankBalance(AICompany.COMPANY_SELF) - 
-            AICompany.GetQuarterlyExpenses(AICompany.COMPANY_SELF, AICompany.CURRENT_QUARTER) -
-            2 * AICompany.GetLoanInterval() > AICompany.GetLoanAmount())) {
-            if(AICompany.SetLoanAmount(0))
-                AILog.Info("Loan repaid");
+        /* Repay the loan if possible. AICompany.GetQuarterlyExpenses returns negative value. */
+        if(AICompany.GetLoanAmount() > 0) {
+            local money_to_spare = AICompany.GetBankBalance(AICompany.COMPANY_SELF) - 2 * AICompany.GetLoanInterval() + 
+                                   AICompany.GetQuarterlyExpenses(AICompany.COMPANY_SELF, AICompany.CURRENT_QUARTER);
+            if(money_to_spare > AICompany.GetLoanInterval()) {
+                local can_repay = floor(money_to_spare / AICompany.GetLoanInterval().tofloat()).tointeger() * AICompany.GetLoanInterval();
+                if(!AICompany.SetLoanAmount(AICompany.GetLoanAmount() - min(can_repay, AICompany.GetLoanAmount())))
+                    AILog.Error("Failed to repay the loan: " + AIError.GetLastErrorString());
+            }
         }
         
         /* Build statues if we have a lot of money left, they increase the stations ratings. */
