@@ -20,6 +20,14 @@ class WaterPathfinder {
     constructor() {}
 }
 
+/* starting from version 14, buoys are no longer needed */
+function WaterPathfinder::AreBuoysNeeded() {
+    local versionInt = AIController.GetVersion();
+    /* bits 24-31 represent Major Version + 16 */
+    local majorVersion = ((versionInt >> 24) & 0xFF) - 16;
+    return majorVersion < 14;
+}
+
 function WaterPathfinder::_IsWater(tile) {
     return (AITile.IsWaterTile(tile) && AITile.GetMaxHeight(tile) == 0) || /* eliminates rivers */
             AIMarine.IsBuoyTile(tile) ||
@@ -142,7 +150,10 @@ function WaterPathfinder::Length() {
 }
 
 function WaterPathfinder::EstimateBuoysCost() {
-    return AIMarine.GetBuildCost(AIMarine.BT_BUOY) * ((this.Length() / this.buoy_distance) + 1);
+    if (AreBuoysNeeded())
+        return AIMarine.GetBuildCost(AIMarine.BT_BUOY) * ((this.Length() / this.buoy_distance) + 1);
+    else
+        return 0;
 }
 
 /* Checks if there is a buoy in radius of 3 tiles. */
@@ -163,6 +174,9 @@ function WaterPathfinder::_GetNearbyBuoy(tile) {
 /* Buoys are essential for longer paths and also speed up the ship pathfinder.
    This function places a buoy every n tiles. Existing buoys are reused. */
 function WaterPathfinder::BuildBuoys() {
+    if (!AreBuoysNeeded())
+        return [];
+
     /* TODO: this is unsafe, nearby buoy can be on a different water area */
     local buoys = [];
     local full = [];

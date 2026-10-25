@@ -34,7 +34,10 @@ function ShipAI::Start() {
     if(!freight.AreShipsAllowed())
         AILog.Warning("Not possible to build ships - falling asleep");
     while(!freight.AreShipsAllowed()) { this.Sleep(1000); }
-    
+
+    if (!freight.pf.AreBuoysNeeded())
+        AILog.Info("Buoys are not needed - they won't be used");
+
     local iter = 0;    
     while(true) {
         /* To speed-up the path finding, we search for the more complicated paths rarely. */

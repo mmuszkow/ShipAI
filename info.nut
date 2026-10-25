@@ -3,7 +3,7 @@ class ShipAI extends AIInfo {
     function GetName()        { return "ShipAI"; }
     function GetDescription() { return "AI using only ships"; }
     function GetVersion()     { return 11; }
-    function GetDate()        { return "2020-05-04"; }
+    function GetDate()        { return "2026-10-25"; }
     function GetAPIVersion () { return "1.2"; } /* for AICompany.GetQuarterlyExpenses */
     function GetURL()         { return "https://www.tt-forums.net/viewtopic.php?f=65&t=75531"; }
     function CreateInstance() { return "ShipAI"; }
